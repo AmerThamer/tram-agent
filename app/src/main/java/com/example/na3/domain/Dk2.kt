@@ -114,7 +114,7 @@ object Dk2 {
                 val tramNames = tramRoutes.map { tramMap[it] ?: it }
 
                 val block = buildString {
-                    append("<b>=== ALERT ===</b><br>")
+                    append("<b>=== ACHTUNG ===</b><br>")
                     append("<b>Érintett viszonylatok:</b><br>")
                     append(tramNames.joinToString(", ")) // emberbarát
                     append("<br>")
