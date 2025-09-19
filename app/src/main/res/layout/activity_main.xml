@@ -1,0 +1,66 @@
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@drawable/background">
+
+    <LinearLayout
+        android:orientation="vertical"
+        android:padding="16dp"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content">
+
+        <Button
+            android:id="@+id/btnDk1"
+            android:text="PÁLYASZÁM KERESŐ"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:background="#0D47A1"
+            android:textColor="#FFFFFF" />
+
+        <Button
+            android:id="@+id/btnDk2"
+            android:text="AKTÍV ZAVAROK"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:background="#0D47A1"
+            android:textColor="#FFFFFF" />
+
+        <Button
+            android:id="@+id/btnDk3"
+            android:text="INDULÁSOK A KÖZELBEN"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:background="#0D47A1"
+            android:textColor="#FFFFFF" />
+
+        <Button
+            android:id="@+id/btnDk4"
+            android:text="TÉRKÉPES KERESŐ"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:background="#0D47A1"
+            android:textColor="#FFFFFF" />
+
+        <Button
+            android:id="@+id/btnDk5"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:background="#0D47A1"
+            android:text="NYOMONKÖVETÉS"
+            android:textColor="#FFFFFF" />
+
+        <Button
+            android:id="@+id/btnGtfs"
+            android:text="GTFS frissítés"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:background="#0D47A1"
+            android:textColor="#FFFFFF" />
+
+    </LinearLayout>
+</ScrollView>
