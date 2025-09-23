@@ -75,7 +75,10 @@ class Dk4Activity : AppCompatActivity(), OnMapReadyCallback {
             override fun onResponse(call: Call, response: Response) {
                 response.body?.string()?.let { body ->
                     val json = JSONObject(body)
-                    val vehicles = json.getJSONObject("data").getJSONArray("list")
+                    val data = json.getJSONObject("data")
+                    val vehicles = data.getJSONArray("list")
+                    val refs = data.optJSONObject("references")
+
                     if (vehicles.length() > 0) {
                         val vehicle = vehicles.getJSONObject(0)
                         val loc = vehicle.optJSONObject("location")
@@ -84,11 +87,14 @@ class Dk4Activity : AppCompatActivity(), OnMapReadyCallback {
                             val lon = loc.optDouble("lon")
                             val tripId = vehicle.optString("tripId")
 
+                            // célállomás kiolvasása a references.trips-ből
+                            var headsign = ""
+                            refs?.optJSONObject("trips")?.optJSONObject(tripId)?.let { tripObj ->
+                                headsign = tripObj.optString("tripHeadsign", "")
+                            }
+
                             runOnUiThread {
-                                updateMap(
-                                    LatLng(lat, lon),
-                                    vehicle.optString("label", vehicleLabel)
-                                )
+                                updateMap(LatLng(lat, lon), headsign)
                             }
 
                             if (tripId.isNotBlank()) {
@@ -109,12 +115,17 @@ class Dk4Activity : AppCompatActivity(), OnMapReadyCallback {
         })
     }
 
-    private fun updateMap(position: LatLng, vehicleLabel: String) {
+    private fun updateMap(position: LatLng, headsign: String) {
         googleMap?.clear()
+        val title = if (headsign.isNotBlank()) {
+            "➡️ $headsign"
+        } else {
+            "➡️ Ismeretlen"
+        }
         googleMap?.addMarker(
             MarkerOptions()
                 .position(position)
-                .title("Pályaszám: $vehicleLabel")
+                .title(title)
                 .icon(resizeIcon(R.drawable.ic_tram, 96, 96)) // sárga villamos marker
         )
         googleMap?.moveCamera(CameraUpdateFactory.newLatLngZoom(position, 15f))
@@ -142,10 +153,8 @@ class Dk4Activity : AppCompatActivity(), OnMapReadyCallback {
                 val stopId = st.optString("stopId").removePrefix("BKK_")
                 val stopInfo = stops.firstOrNull { it.stopId == stopId }
                 stopInfo?.let { stop ->
-                    // LONG-ként olvasunk minden időt
                     val scheduledRaw = st.optLong("arrivalTime", 0L).takeIf { it > 0L }
                     val predictedRaw = st.optLong("predictedArrivalTime", 0L).takeIf { it > 0L }
-                    // (opcionális) ha a szerver ad 'serviceDate'-et (ms), később bővíthető vele:
                     val serviceDateMs = st.optLong("serviceDate", 0L).takeIf { it > 0L }
 
                     val arrivalText = when {
@@ -167,24 +176,14 @@ class Dk4Activity : AppCompatActivity(), OnMapReadyCallback {
         }
     }
 
-    /**
-     * Rugalmas konvertáló:
-     * - ha 'raw' 10 számjegy körüli -> másodperc; 13 számjegy körüli -> millis
-     * - mindig Europe/Budapest időzónában jelenít
-     * - ha a backend valaha serviceDate+offset formátumot adna, a serviceDateMs felhasználható
-     */
     private fun epochToHms(raw: Long, serviceDateMs: Long? = null): String {
         if (raw <= 0L) return "N/A"
-
-        // 1) másodperc vs. millis felismerése
         val millis = when {
-            raw >= 10_000_000_000L -> raw                          // >= ~Sat Nov 20 2286 (ms) -> biztos millis
-            raw >= 1_000_000_000L -> raw * 1000L                   // ~2001..~2286 (sec) -> szekundum
-            // ritka eset: ha 0..86400 közti érték jön (másodperc a nap elejétől):
+            raw >= 10_000_000_000L -> raw
+            raw >= 1_000_000_000L -> raw * 1000L
             serviceDateMs != null && raw in 1..172_800L -> serviceDateMs + (raw * 1000L)
             else -> raw * 1000L
         }
-
         val sdf = SimpleDateFormat("HH:mm:ss", Locale("hu", "HU"))
         sdf.timeZone = TimeZone.getTimeZone("Europe/Budapest")
         return try {

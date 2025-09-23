@@ -118,7 +118,7 @@ object Dk2 {
                     append("<b>Érintett viszonylatok:</b><br>")
                     append(tramNames.joinToString(", ")) // emberbarát
                     append("<br>")
-                    append("<i>(nyers értékek: $tramRoutes)</i><br>") // nyers lista
+                 //   append("<i>(nyers értékek: $tramRoutes)</i><br>") // nyers lista
                     append("<b>Kezdés:</b><br>").append(fmt(startTs)).append("<br>")
                     append("<b>Vége:</b><br>").append(
                         if (endTs != Long.MAX_VALUE) fmt(endTs) else "Ismeretlen"
@@ -136,7 +136,7 @@ object Dk2 {
                 blocks += block
             }
 
-            if (blocks.isEmpty()) "✅ Jelenleg nincs villamoszavar."
+            if (blocks.isEmpty()) "✅ Jelenleg nincs zavar a villamos közlekedésben."
             else blocks.asReversed().joinToString("<br><br><br>") // fordított sorrend
         }
     }

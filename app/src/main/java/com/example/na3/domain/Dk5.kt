@@ -27,7 +27,6 @@ object Dk5 {
 
         when {
             sec <= -31 -> {
-                // nagyon késő: piros háttér + fehér szöveg
                 spannable.setSpan(
                     BackgroundColorSpan(0xFFFF0000.toInt()), // piros háttér
                     0, txt.length, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE
@@ -38,7 +37,6 @@ object Dk5 {
                 )
             }
             sec in -30..180 -> {
-                // normál: zöld háttér + fekete szöveg
                 spannable.setSpan(
                     BackgroundColorSpan(0xFF00FF00.toInt()), // zöld háttér
                     0, txt.length, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE
@@ -49,7 +47,6 @@ object Dk5 {
                 )
             }
             sec >= 181 -> {
-                // túl korai: kék háttér + piros szöveg
                 spannable.setSpan(
                     BackgroundColorSpan(0xFF0000FF.toInt()), // kék háttér
                     0, txt.length, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE
@@ -75,22 +72,20 @@ object Dk5 {
     }
 
     suspend fun run(vehicleLabel: String, gtfsDir: File): CharSequence = withContext(Dispatchers.Default) {
-        val sb = StringBuilder().apply { appendLine("🚍 --- NYOMKÖVETÉS ---") }
-
         val vehicle = BkkApi.getVehicleForQuery(vehicleLabel)
             ?: return@withContext "A jármű nem található vagy nem aktív."
 
-        sb.appendLine("ℹ️ Jármű adatai:")
-        val lastUpdate = BkkApi.formatTimestampMillisUtc(vehicle.optLong("lastUpdateTime"))
-        sb.appendLine("   📍 lat: ${vehicle.optJSONObject("location")?.optDouble("lat")}")
-        sb.appendLine("   📍 lon: ${vehicle.optJSONObject("location")?.optDouble("lon")}")
-        sb.appendLine("   🛤 route_id: ${vehicle.optString("routeId")}")
-        sb.appendLine("   🚌 trip_id: ${vehicle.optString("tripId")}")
-        sb.appendLine("   ⏱ last_update_time: ${lastUpdate ?: "N/A"}")
-
+        val routeId = vehicle.optString("routeId")
         val tripId = vehicle.optString("tripId")
+
+        val header = StringBuilder().apply {
+            appendLine(" --- NYOMKÖVETÉS ---")
+            appendLine("🛤 RouteID: $routeId")
+            appendLine("🚋 TripID: $tripId")
+        }
+
         if (tripId.isBlank()) {
-            return@withContext sb.toString() + "\nNincs elérhető menetrendi adat (tripId hiányzik)."
+            return@withContext header.toString() + "\nNincs elérhető menetrendi adat (tripId hiányzik)."
         }
 
         val stopTimes = BkkApi.getTripDetails(tripId)
@@ -98,11 +93,10 @@ object Dk5 {
 
         val stopsFile = File(gtfsDir, "stops.txt")
         val stops = BkkApi.loadStops(stopsFile)
-        val nowSec = (System.currentTimeMillis() / 1000).toInt()
 
         val result = android.text.SpannableStringBuilder()
-        result.append(sb.toString())
-        result.append("\n== 🚏 Megállók és előrejelzések ==\n")
+        result.append(header.toString())
+        result.append("\n== 🚏 Várható megállóhelyi indulások ==\n")
 
         for (st in stopTimes) {
             val stopId = st.optString("stopId").removePrefix("BKK_")

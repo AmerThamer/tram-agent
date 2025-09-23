@@ -158,7 +158,7 @@ class Dk1Activity : AppCompatActivity() {
                     val parts = blockId.split("_")
                     val forgalmiSzam = if (parts.size >= 3) parts[parts.size - 2] else "Ismeretlen"
                     val rendszam = vehicle.optString("licensePlate", "Nincs rendszám")
-                    lines.add("🚋 $routeName | 🚌 Forgalmi szám: $forgalmiSzam | Pályaszám: $rendszam")
+                    lines.add("🚋 $routeName |  Forgalmi szám: $forgalmiSzam | Pályaszám: $rendszam")
                 }
 
                 lines.joinToString("\n")
