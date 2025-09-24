@@ -21,7 +21,7 @@ class GtfsActivity : AppCompatActivity() {
         setContentView(binding.root)
 
         binding.btnDownload.setOnClickListener {
-            binding.textResult.text = "FRISSÍTÉS FOLYAMATBAN..."
+            binding.textResult.text = "GTFS fájlok letöltése és kicsomagolása..."
 
             lifecycleScope.launch {
                 try {
