@@ -1,5 +1,6 @@
 package com.example.na3.ui
 
+import android.graphics.Typeface
 import android.os.Bundle
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
@@ -18,6 +19,9 @@ class Dk5Activity : AppCompatActivity() {
         setContentView(binding.root)
 
         val gtfsDir = File(filesDir, "gtfs")
+
+        // Eredmények félkövérré tétele
+        binding.result.setTypeface(null, Typeface.BOLD)
 
         binding.queryButton.setOnClickListener {
             val vehicleLabel = binding.queryInput.text.toString().trim()
