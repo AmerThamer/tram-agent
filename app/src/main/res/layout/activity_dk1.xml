@@ -6,7 +6,6 @@
     android:layout_height="match_parent"
     android:background="@drawable/background_dk1">
 
-    <!-- Segítség szöveg -->
     <TextView
         android:id="@+id/helpText"
         android:layout_width="match_parent"
@@ -17,7 +16,6 @@
         android:textSize="14sp"
         android:paddingBottom="8dp"/>
 
-    <!-- Többszörös választó gomb -->
     <Button
         android:id="@+id/multiSelectButton"
         android:layout_width="match_parent"
@@ -29,7 +27,6 @@
         android:background="#0D47A1"
         android:textColor="@android:color/white" />
 
-    <!-- Szöveges bevitel -->
     <EditText
         android:id="@+id/queryInput"
         android:hint="BKK_3XZY..."
@@ -42,7 +39,6 @@
         android:textColor="@android:color/white"
         android:textColorHint="@android:color/white" />
 
-    <!-- Lekérdezés gomb -->
     <Button
         android:id="@+id/queryButton"
         android:text="LEKÉRDEZÉS"

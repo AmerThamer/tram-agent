@@ -1,6 +1,6 @@
-package com.example.na3.domain
+package com.amerthamer.tramagent.domain
 
-import com.example.na3.data.BkkApi
+import com.amerthamer.tramagent.data.BkkApi
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.File

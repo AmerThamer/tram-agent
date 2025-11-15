@@ -1,4 +1,4 @@
-package com.example.na3.data
+package com.amerthamer.tramagent.data
 
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -11,14 +11,9 @@ import java.text.SimpleDateFormat
 import java.util.*
 import kotlin.math.*
 
-// -------------------------------------------------------------
-// BKK API/GTFS segéd
-// - Robusztus CSV parser
-// - trip_headsign támogatás
-// - ÚJ: routes.txt betöltése (route_type, route_short_name)
-// -------------------------------------------------------------
+
 object BkkApi {
-    const val API_KEY = "2cde79f6-2ac0-4c42-88a3-9e15208ee44e"
+    const val API_KEY = "YOUR_BKK_API_KEY_HERE"
     private const val FUTAR_BASE = "https://futar.bkk.hu/api/query/v1/ws/otp/api/where"
     private const val GO_BASE = "https://go.bkk.hu/api/query/v1/ws/otp/api/where"
 

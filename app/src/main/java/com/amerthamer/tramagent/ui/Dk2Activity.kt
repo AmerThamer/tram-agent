@@ -1,12 +1,12 @@
-package com.example.na3.ui
+package com.amerthamer.tramagent.ui
 
 import android.os.Bundle
 import android.text.method.LinkMovementMethod
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.text.HtmlCompat
 import androidx.lifecycle.lifecycleScope
-import com.example.na3.databinding.ActivityDk2Binding
-import com.example.na3.domain.Dk2
+import com.amerthamer.tramagent.databinding.ActivityDk2Binding
+import com.amerthamer.tramagent.domain.Dk2
 import kotlinx.coroutines.launch
 
 class Dk2Activity : AppCompatActivity() {
@@ -22,7 +22,6 @@ class Dk2Activity : AppCompatActivity() {
                 binding.result.text = "Lekérdezés folyamatban..."
                 val output = Dk2.run()
 
-                // HTML feldolgozás és kattintható linkek
                 binding.result.text =
                     HtmlCompat.fromHtml(output, HtmlCompat.FROM_HTML_MODE_LEGACY)
                 binding.result.movementMethod = LinkMovementMethod.getInstance()

@@ -1,4 +1,4 @@
-package com.example.na3.gtfs
+package com.amerthamer.tramagent.gtfs
 
 import android.content.Context
 import android.util.Log
@@ -13,13 +13,11 @@ object GtfsUpdater {
 
     private val client = OkHttpClient()
 
-    // Egyszerű hívás: belső tárhelyre ment
     suspend fun update(context: Context): String {
         val dstDir = File(context.filesDir, "gtfs")
         return update(dstDir)
     }
 
-    // Manuális hívás: megadott könyvtárba ment
     suspend fun update(dstDir: File): String = withContext(Dispatchers.IO) {
         val url = "https://go.bkk.hu/api/static/v1/public-gtfs/budapest_gtfs.zip"
         val req = Request.Builder().url(url).get().build()
@@ -53,7 +51,6 @@ object GtfsUpdater {
             }
         }
 
-        // Kilistázza a könyvtár tartalmát
         val files = dstDir.walkTopDown().filter { it.isFile }.toList()
         Log.d("GTFS", "Összes fájl (${files.size} db):")
         files.forEach {

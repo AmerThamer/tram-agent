@@ -1,7 +1,7 @@
-package com.example.na3.domain
+package com.amerthamer.tramagent.domain
 
 import com.google.transit.realtime.GtfsRealtime
-import com.example.na3.data.BkkApi
+import com.amerthamer.tramagent.data.BkkApi
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
@@ -13,7 +13,7 @@ object Dk2 {
 
     private val client = OkHttpClient()
 
-    // leképezés: GTFS routeId -> emberbarát név
+
     private val tramMap = mapOf(
         "3010" to "1",
         "3011" to "1A",
@@ -99,22 +99,22 @@ object Dk2 {
                 val header = trans(alert.headerText)
                 val desc = trans(alert.descriptionText)
 
-                // nyers értékek a feedből
+
                 val routeIdsRaw = alert.informedEntityList
                     .mapNotNull { it.routeId }
                     .distinct()
                     .sorted()
 
-                // csak villamosok: 3xxx tartomány
+
                 val tramRoutes = routeIdsRaw.filter { it.startsWith("3") }
 
                 if (tramRoutes.isEmpty()) continue
 
-                // emberbarát formátum
+
                 val tramNames = tramRoutes.map { tramMap[it] ?: it }
 
                 val block = buildString {
-                    append("<b>=== ACHTUNG ===</b><br>")
+                    append("<b>=== ZAVAR ===</b><br>")
                     append("<b>Érintett viszonylatok:</b><br>")
                     append(tramNames.joinToString(", ")) // emberbarát
                     append("<br>")

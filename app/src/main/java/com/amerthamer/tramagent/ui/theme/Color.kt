@@ -1,4 +1,4 @@
-package com.example.na3.ui.theme
+package com.amerthamer.tramagent.ui.theme
 
 import androidx.compose.ui.graphics.Color
 

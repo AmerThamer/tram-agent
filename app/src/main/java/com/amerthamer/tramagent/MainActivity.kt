@@ -1,9 +1,9 @@
-package com.example.na3.ui
+package com.amerthamer.tramagent.ui
 
 import android.content.Intent
 import android.os.Bundle
 import androidx.appcompat.app.AppCompatActivity
-import com.example.na3.databinding.ActivityMainBinding
+import com.amerthamer.tramagent.databinding.ActivityMainBinding
 
 class MainActivity : AppCompatActivity() {
 

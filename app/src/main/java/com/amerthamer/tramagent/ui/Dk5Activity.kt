@@ -1,11 +1,11 @@
-package com.example.na3.ui
+package com.amerthamer.tramagent.ui
 
 import android.graphics.Typeface
 import android.os.Bundle
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
-import com.example.na3.databinding.ActivityDk5Binding
-import com.example.na3.domain.Dk5
+import com.amerthamer.tramagent.databinding.ActivityDk5Binding
+import com.amerthamer.tramagent.domain.Dk5
 import kotlinx.coroutines.launch
 import java.io.File
 
@@ -20,7 +20,6 @@ class Dk5Activity : AppCompatActivity() {
 
         val gtfsDir = File(filesDir, "gtfs")
 
-        // Eredmények félkövérré tétele
         binding.result.setTypeface(null, Typeface.BOLD)
 
         binding.queryButton.setOnClickListener {

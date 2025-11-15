@@ -1,5 +1,5 @@
 // app/src/main/java/com/example/na3/domain/Dk3a.kt
-package com.example.na3.domain
+package com.amerthamer.tramagent.domain
 
 import android.content.Context
 import org.json.JSONObject
@@ -48,7 +48,7 @@ object Dk3a {
     ): List<String> {
         val out = mutableListOf<String>()
 
-        // 1) Közeli megállók
+
         val stopsUrl =
             "$BASE/stops-for-location.json?lat=$lat&lon=$lon&radius=$radius&query=&maxCount=$maxStops&version=4"
         val stopsJson = JSONObject(httpGet(stopsUrl))
@@ -66,17 +66,15 @@ object Dk3a {
             val stopName = stop.optString("name", stop.optString("shortName", "Ismeretlen megálló"))
             out += "📍 $stopName"
 
-            // 2) Indulások a megállóból
+
             val depUrl =
                 "$BASE/arrivals-and-departures-for-stop.json?stopId=$stopId&minutesBefore=0&minutesAfter=$minutesAfter&includeReferences=true&version=4"
             val depJson = JSONObject(httpGet(depUrl)).getJSONObject("data")
 
-            // references
             val refs = depJson.getJSONObject("references")
             val routes = refs.optJSONObject("routes") ?: JSONObject()
             val trips = refs.optJSONObject("trips") ?: JSONObject()
 
-            // entries
             val entries = depJson.getJSONObject("entry")
                 .getJSONArray("arrivalsAndDepartures")
 

@@ -6,7 +6,7 @@ plugins {
 }
 
 android {
-    namespace = "com.example.na3"
+    namespace = "com.amerthamer.tramagent"
     compileSdk = 36
 
     defaultConfig {

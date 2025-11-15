@@ -1,11 +1,11 @@
-package com.example.na3.ui
+package com.amerthamer.tramagent.ui
 
 import android.os.Bundle
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
-import com.example.na3.databinding.ActivityGtfsBinding
-import com.example.na3.gtfs.GtfsUpdater
+import com.amerthamer.tramagent.databinding.ActivityGtfsBinding
+import com.amerthamer.tramagent.gtfs.GtfsUpdater
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext

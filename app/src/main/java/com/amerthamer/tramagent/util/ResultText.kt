@@ -1,4 +1,4 @@
-package com.example.na3.util
+package com.amerthamer.tramagent.util
 
 object ResultText {
     const val BOLD = "<b>"

@@ -1,4 +1,4 @@
-package com.example.na3.ui
+package com.amerthamer.tramagent.ui
 
 import android.Manifest
 import android.content.pm.PackageManager
@@ -8,8 +8,8 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.lifecycleScope
-import com.example.na3.databinding.ActivityDk3Binding
-import com.example.na3.data.BkkApi
+import com.amerthamer.tramagent.databinding.ActivityDk3Binding
+import com.amerthamer.tramagent.data.BkkApi
 import com.google.android.gms.location.LocationServices
 import com.google.android.gms.location.Priority
 import kotlinx.coroutines.Dispatchers
@@ -154,10 +154,8 @@ class Dk3aActivity : AppCompatActivity() {
                 val trip = trips[tripId] ?: return@forEach
                 val route = routes[trip.routeId] ?: return@forEach
 
-                // csak villamos: GTFS route_type: 0 (tram) – biztos ami biztos: 900-at is engedünk
                 if (route.type != 0 && route.type != 900) return@forEach
 
-                // zárjuk ki a 24 feletti (másnapi) időket
                 val hour = depTimeStr.takeWhile { it != ':' }.toIntOrNull() ?: return@forEach
                 if (hour >= 24) return@forEach
 

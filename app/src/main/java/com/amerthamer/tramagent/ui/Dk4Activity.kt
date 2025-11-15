@@ -1,4 +1,4 @@
-package com.example.na3.ui
+package com.amerthamer.tramagent.ui
 
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
@@ -8,8 +8,8 @@ import android.widget.EditText
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
-import com.example.na3.R
-import com.example.na3.data.BkkApi
+import com.amerthamer.tramagent.R
+import com.amerthamer.tramagent.data.BkkApi
 import com.google.android.gms.maps.CameraUpdateFactory
 import com.google.android.gms.maps.GoogleMap
 import com.google.android.gms.maps.OnMapReadyCallback
@@ -87,7 +87,6 @@ class Dk4Activity : AppCompatActivity(), OnMapReadyCallback {
                             val lon = loc.optDouble("lon")
                             val tripId = vehicle.optString("tripId")
 
-                            // célállomás kiolvasása a references.trips-ből
                             var headsign = ""
                             refs?.optJSONObject("trips")?.optJSONObject(tripId)?.let { tripObj ->
                                 headsign = tripObj.optString("tripHeadsign", "")

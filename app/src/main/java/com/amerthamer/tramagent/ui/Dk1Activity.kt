@@ -1,15 +1,16 @@
-package com.example.na3.ui
+package com.amerthamer.tramagent.ui
 
 import android.content.SharedPreferences
 import android.os.Bundle
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
-import com.example.na3.databinding.ActivityDk1Binding
+import com.amerthamer.tramagent.databinding.ActivityDk1Binding
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import org.json.JSONObject
+import com.amerthamer.tramagent.data.BkkApi
 import android.app.AlertDialog
 
 class Dk1Activity : AppCompatActivity() {
@@ -61,7 +62,8 @@ class Dk1Activity : AppCompatActivity() {
     private lateinit var prefs: SharedPreferences
 
     companion object {
-        private const val API_KEY = "2cde79f6-2ac0-4c42-88a3-9e15208ee44e"
+        private val API_KEY = BkkApi.API_KEY
+
         private const val BASE_URL = "https://go.bkk.hu/api/query/v1/ws/otp/api/where"
         private const val PREFS_NAME = "dk1_prefs"
         private const val KEY_SELECTED = "selected_routes"
@@ -170,14 +172,12 @@ class Dk1Activity : AppCompatActivity() {
 
     override fun onPause() {
         super.onPause()
-        // Kimeneti szöveg és manuális input törlése
         binding.result.text = ""
         binding.queryInput.text.clear()
     }
 
     override fun onDestroy() {
         super.onDestroy()
-        // Checkbox választások törlése, ha kilépünk az Activity-ből
         prefs.edit().remove(KEY_SELECTED).apply()
         selectedRoutes.clear()
     }
