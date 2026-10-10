@@ -7,4 +7,11 @@
         <item name="android:windowBackground">@color/white</item>
     </style>
 
+    <!-- A Compose-os képernyők alapja: sötét ablakháttér, hogy induláskor ne villanjon fehér -->
+    <style name="Theme.TramAgent" parent="android:Theme.Material.NoActionBar">
+        <item name="android:windowBackground">@color/night</item>
+        <item name="android:statusBarColor">@android:color/transparent</item>
+        <item name="android:navigationBarColor">@android:color/transparent</item>
+    </style>
+
 </resources>

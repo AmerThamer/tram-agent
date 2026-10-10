@@ -1,5 +1,6 @@
 package com.amerthamer.tramagent.data
 
+import com.amerthamer.tramagent.BuildConfig
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
@@ -29,7 +30,7 @@ object BkkApi {
      *
      * A publikus repóban ez csak placeholder
      */
-    const val API_KEY = "YOUR_BKK_API_KEY_HERE"
+    val API_KEY: String = BuildConfig.BKK_API_KEY
 
     // FUTÁR (futar.bkk.hu) alap URL – pl. trip-details, vehicles-for-location
     private const val FUTAR_BASE = "https://futar.bkk.hu/api/query/v1/ws/otp/api/where"
