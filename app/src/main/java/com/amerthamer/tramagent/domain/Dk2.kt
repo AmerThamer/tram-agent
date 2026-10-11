@@ -14,46 +14,6 @@ object Dk2 {
     private val client = OkHttpClient()
 
 
-    private val tramMap = mapOf(
-        "3010" to "1",
-        "3011" to "1A",
-        "3020" to "2",
-        "3022" to "2B",
-        "3030" to "3",
-        "3040" to "4",
-        "3060" to "6",
-        "3120" to "12",
-        "3140" to "14",
-        "3170" to "17",
-        "3190" to "19",
-        "3230" to "23",
-        "3240" to "24",
-        "3280" to "28",
-        "3281" to "28A",
-        "3370" to "37",
-        "3371" to "37A",
-        "3375" to "37E",
-        "3410" to "41",
-        "3420" to "42",
-        "3470" to "47",
-        "3480" to "48",
-        "3490" to "49",
-        "3500" to "50",
-        "3510" to "51",
-        "3511" to "51A",
-        "3520" to "52",
-        "3560" to "56",
-        "3561" to "56A",
-        "3590" to "59",
-        "3591" to "59A",
-        "3592" to "59B",
-        "3600" to "60",
-        "3610" to "61",
-        "3612" to "61B",
-        "3620" to "62",
-        "3621" to "62A",
-        "3690" to "69"
-    )
 
     /** Egy villamosokat érintő zavar, megjelenítésre előkészítve. */
     data class TramAlert(
@@ -142,7 +102,7 @@ object Dk2 {
 
                     TramAlert(
                         id = entity.id,
-                        lines = tramRoutes.map { tramMap[it] ?: it }.distinct().sortedWith(LineOrder),
+                        lines = tramRoutes.map { TramLines.nameFor(it) ?: it }.distinct().sortedWith(LineOrder),
                         start = ap?.takeIf { it.hasStart() && it.start > 0 }?.start,
                         end = ap?.takeIf { it.hasEnd() && it.end > 0 }?.end,
                         header = if (header.startsWith("http")) "" else header,

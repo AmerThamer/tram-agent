@@ -185,6 +185,34 @@ fun TramLoader(
                 facingRight = forward,
             )
         }
-        Text(text, style = MaterialTheme.typography.bodyMedium, color = TextSecondary)
+        if (text.isNotEmpty()) Text(text, style = MaterialTheme.typography.bodyMedium, color = TextSecondary)
+    }
+}
+
+/**
+ * Haladásjelző: a villamos a [progress] (0..1) arányában jár a két végállomás között,
+ * a megtett szakasz sárgán világít. Ha [progress] null, ingázó töltésjelzőként viselkedik.
+ */
+@Composable
+fun TramProgress(progress: Float?, modifier: Modifier = Modifier) {
+    if (progress == null) {
+        TramLoader(modifier, text = "")
+        return
+    }
+    val animated by androidx.compose.animation.core.animateFloatAsState(
+        progress.coerceIn(0f, 1f), tween(400), label = "progress",
+    )
+    Canvas(modifier.fillMaxWidth().height(44.dp)) {
+        val wireY = 3.dp.toPx()
+        val railY = size.height - 4.dp.toPx()
+        val tw = TramWidth.toPx()
+        val x = animated * (size.width - tw)
+        drawLine(Color.White.copy(alpha = 0.25f), Offset(0f, wireY), Offset(size.width, wireY), 1.5.dp.toPx())
+        drawLine(TramYellow.copy(alpha = 0.2f), Offset(0f, railY), Offset(size.width, railY), 3.dp.toPx())
+        drawLine(TramYellow, Offset(0f, railY), Offset(x + tw / 2, railY), 3.dp.toPx())
+        listOf(0f, size.width).forEach {
+            drawLine(TramYellow, Offset(it, railY - 8.dp.toPx()), Offset(it, railY + 2.dp.toPx()), 2.dp.toPx())
+        }
+        drawTram(left = x, top = railY - TramHeight.toPx() - 1.dp.toPx(), wireY = wireY, color = TramYellow)
     }
 }

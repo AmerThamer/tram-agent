@@ -59,16 +59,17 @@ files/gtfs/
 
 ```
 app/
- ├─ data/         → BkkApi (FUTÁR/GO REST lekérdezések + GTFS loader)
- ├─ domain/       → DK1–DK5 logikák
- ├─ ui/           → Activity-k (DK1–DK5)
- ├─ gtfs/         → GtfsUpdater (ZIP letöltés + kicsomagolás)
- ├─ res/layout/   → Képernyő elrendezések
- └─ ...
+ ├─ data/            → BkkApi (FUTÁR/GO REST + GTFS loader), AlertsRepository
+ ├─ domain/          → DK1–DK5 logikák, Futar (közös valós idejű lekérdezések), TramLines
+ ├─ gtfs/            → GtfsUpdater (ZIP letöltés + kicsomagolás), GtfsRepository
+ ├─ ui/theme/        → „Éjszakai BKK” téma (színek, betűk, pontmátrix font)
+ ├─ ui/components/   → közös Compose elemek: villamos-animációk, kijelzős (LED) elemek, kártyák, oldalváz
+ ├─ ui/<képernyő>/   → Compose képernyők (home, vehicles, alerts, nearby, map, tracking, gtfs)
+ └─ ui/nav/          → navigáció „beálló szerelvény” átmenetekkel
 ```
 
 Az architektúra szétválasztja:
-- **UI réteg** (Android felület)  
+- **UI réteg** (Jetpack Compose, egyetlen Activity + navigation-compose)  
 - **Domain** (logika)  
 - **Data** (API + fájl hozzáférés)
 
@@ -76,26 +77,15 @@ Az architektúra szétválasztja:
 
 ##  API-kulcsok
 
-### Google Maps API kulcs
-A projekt nem tartalmaz éles kulcsot.  
-Futtatáshoz add meg a saját kulcsodat:
+A kulcsokat a projekt gyökerében lévő (verziókezelésből kizárt) `local.properties` fájlba kell írni:
 
-```xml
-<meta-data
-    android:name="com.google.android.geo.API_KEY"
-    android:value="YOUR_GOOGLE_MAPS_API_KEY_HERE" />
+```properties
+bkk.apiKey=SAJAT_BKK_FUTAR_KULCS
+maps.apiKey=SAJAT_GOOGLE_MAPS_KULCS
 ```
 
-### BKK FUTÁR API kulcs
-
-`BkkApi.kt`:
-
-```kotlin
-const val API_KEY = "YOUR_BKK_API_KEY_HERE"
-```
-
- A repóban csak helykitöltők szerepelnek.  
- A saját kulcsodat **ne commitold**.
+A build ezekből készíti a `BuildConfig.BKK_API_KEY` mezőt és a manifest Maps-kulcsát,
+így a kulcsok sosem kerülnek a repóba. Kulcs nélkül az app elindul, és érthető hibaüzenetet mutat.
 
 ---
 
@@ -106,7 +96,7 @@ const val API_KEY = "YOUR_BKK_API_KEY_HERE"
    git clone https://github.com/AmerThamer/tram-agent.git
    ```
 2. Nyisd meg Android Studio-ban  
-3. Add meg a saját BKK + Google Maps API kulcsokat  
+3. Add meg a saját BKK + Google Maps API kulcsokat a `local.properties`-ben  
 4. Futtasd a GTFS Frissítőt  
 5. Teszteld a DK1–DK5 modulokat  
 

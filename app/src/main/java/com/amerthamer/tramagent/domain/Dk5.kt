@@ -1,173 +1,35 @@
 package com.amerthamer.tramagent.domain
 
 import com.amerthamer.tramagent.data.BkkApi
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
-import java.io.File
-import java.text.SimpleDateFormat
-import java.util.*
-import android.text.SpannableString
-import android.text.Spannable
-import android.text.SpannableStringBuilder
-import android.text.style.BackgroundColorSpan
-import android.text.style.ForegroundColorSpan
 
 /**
- * NYOMKÖVETÉS domain logika
+ * DK5 – Nyomkövetés: egy jármű (pályaszám alapján) aktuális menete megállónként,
+ * menetrendi és becsült időkkel, késéssel. A DK4 térkép is ezt használja.
  *
- * Egy adott jármű (pályaszám alapján) aktuális tripjéhez tartozó megállókat
- * és késés-információkat számolja ki és formázza meg.
- *
- * - keres egy aktív járművet FUTÁR API-val (getVehicleForQuery)
- * - tripId alapján lekéri a stopTimes listát (trip-details)
- * - GTFS stops.txt alapján megálló neveket keres
- * - késést színezett (Spannable) formában jeleníti meg
+ * A becsült idők az aktuális pontig a valós menetet, utána a számolt késés/sietés
+ * kivetítését mutatják (a FUTÁR predikciója alapján).
  */
 object Dk5 {
 
-    /**
-     * Késés formázása "±M:SS" formátumra.
-     *
-     * @param seconds késés másodpercben (negatív = előfutás, pozitív = késés)
-     */
-    private fun formatDelay(seconds: Int): String {
-        val sign = if (seconds >= 0) "+" else "-"
-        val s = kotlin.math.abs(seconds)
-        val m = s / 60
-        val sec = s % 60
-        return "$sign$m:${"%02d".format(sec)}"
+    data class Tracking(
+        val vehicle: Futar.Vehicle,
+        val trip: Futar.TripDetails,
+        /** A következő (vagy éppen kiszolgált) megálló indexe a trip.stops-ban. */
+        val nextIndex: Int,
+        val fetchedAtSec: Long,
+    ) {
+        /** Az aktuális késés: a következő megálló eltérése, ha nincs, az előzőé. */
+        val currentDelaySec: Int?
+            get() = trip.stops.getOrNull(nextIndex)?.delaySec ?: trip.stops.getOrNull(nextIndex - 1)?.delaySec
     }
 
-    /**
-     * Késés formázása és kiemelése színekkel.(FUTÁR OBU KIJELZŐJÉNEK MINTÁJÁRA)
-     *
-     * - piros háttér, fehér szöveg: erős előfutás (≤ -31 mp)
-     * - zöld háttér, fekete szöveg: „normál” tartomány (-30..+180 mp)
-     * - kék háttér, piros szöveg: nagy késés (≥ +181 mp)
-     *
-     * A visszaadott SpannableString közvetlenül megjeleníthető TextView-ban.
-     */
-    private fun styledDelay(sec: Int): SpannableString {
-        val txt = formatDelay(sec)
-        val spannable = SpannableString(txt)
-
-        when {
-            sec <= -31 -> {
-                spannable.setSpan(
-                    BackgroundColorSpan(0xFFFF0000.toInt()), // piros háttér
-                    0, txt.length, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE
-                )
-                spannable.setSpan(
-                    ForegroundColorSpan(0xFFFFFFFF.toInt()), // fehér szöveg
-                    0, txt.length, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE
-                )
-            }
-            sec in -30..180 -> {
-                spannable.setSpan(
-                    BackgroundColorSpan(0xFF00FF00.toInt()), // zöld háttér
-                    0, txt.length, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE
-                )
-                spannable.setSpan(
-                    ForegroundColorSpan(0xFF000000.toInt()), // fekete szöveg
-                    0, txt.length, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE
-                )
-            }
-            sec >= 181 -> {
-                spannable.setSpan(
-                    BackgroundColorSpan(0xFF0000FF.toInt()), // kék háttér
-                    0, txt.length, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE
-                )
-                spannable.setSpan(
-                    ForegroundColorSpan(0xFFFF0000.toInt()), // piros szöveg
-                    0, txt.length, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE
-                )
-            }
-        }
-
-        return spannable
-    }
-
-    /**
-     * Epoch másodperc → HH:mm:ss formátumra konvertálása (helyi idő szerint).
-     */
-    private fun epochToHms(epoch: Int?): String {
-        return try {
-            if (epoch == null) return "N/A"
-            val sdf = SimpleDateFormat("HH:mm:ss", Locale("hu", "HU"))
-            sdf.format(Date(epoch * 1000L))
-        } catch (_: Exception) {
-            epoch?.toString() ?: "N/A"
-        }
-    }
-
-    /**
-     * A NYOMKÖVETÉS fő belépési pontja.
-     *
-     * @param vehicleLabel jármű pályaszáma (felhasználó által megadott érték)
-     * @param gtfsDir a GTFS állományokat tartalmazó könyvtár (pl. filesDir/gtfs)
-     * @return formázott, színezett szöveg (CharSequence), ami közvetlenül kiírható TextView-ba
-     */
-    suspend fun run(vehicleLabel: String, gtfsDir: File): CharSequence = withContext(Dispatchers.Default) {
-        // Jármű keresése a FUTÁR API-ban a pályaszám alapján
-        val vehicle = BkkApi.getVehicleForQuery(vehicleLabel)
-            ?: return@withContext "A jármű nem található vagy nem aktív."
-
-        val routeId = vehicle.optString("routeId")
-        val tripId = vehicle.optString("tripId")
-
-        // Fejléc felépítése (csak sima StringBuilder)
-        val header = StringBuilder().apply {
-            appendLine(" --- NYOMKÖVETÉS ---")
-            appendLine("🛤 RouteID: $routeId")
-            appendLine("🚋 TripID: $tripId")
-        }
-
-        // Ha nincs tripId, nem tudunk menetrendi adatot kérni
-        if (tripId.isBlank()) {
-            return@withContext header.toString() + "\nNincs elérhető menetrendi adat (tripId hiányzik)."
-        }
-
-        // StopTimes lekérése FUTÁRból a tripId alapján
-        val stopTimes = BkkApi.getTripDetails(tripId)
-        if (stopTimes.isEmpty()) return@withContext "\nNincs elérhető valós idejű megállólista ehhez a tripId-hez."
-
-        // GTFS-ből megállók (név + koordináta)
-        val stopsFile = File(gtfsDir, "stops.txt")
-        val stops = BkkApi.loadStops(stopsFile)
-
-        // Eredmény felépítése színezhető szöveggel (SpannableStringBuilder)
-        val result = SpannableStringBuilder()
-        result.append(header.toString())
-        result.append("\n== 🚏 Várható megállóhelyi indulások ==\n")
-
-        // Végigmegyünk az összes stopTime bejegyzésen és kirakjuk a megállókat
-        for (st in stopTimes) {
-            val stopId = st.optString("stopId").removePrefix("BKK_")
-            val stopInfo = stops.firstOrNull { it.stopId == stopId }
-            val stopName = stopInfo?.stopName ?: "ismeretlen megálló"
-
-            // Menetrendi érkezési idő (epoch másodperc)
-            val scheduled = st.optInt("arrivalTime", Int.MIN_VALUE).takeIf { it != Int.MIN_VALUE }
-            // Becsült (predicted) érkezési idő (epoch másodperc)
-            val predicted = st.optInt("predictedArrivalTime", Int.MIN_VALUE).takeIf { it != Int.MIN_VALUE }
-            // Késés, ahogy az API adja (másodperc)
-            val delayApi = st.optInt("arrivalDelay", Int.MIN_VALUE).takeIf { it != Int.MIN_VALUE }
-
-            result.append("🚏 Megálló: $stopName\n")
-            result.append("    Menetrendi érkezés: ${scheduled?.let { epochToHms(it) } ?: "N/A"}\n")
-            result.append("    Becsült érkezés: ${predicted?.let { epochToHms(it) } ?: "N/A"}\n")
-
-            // Késés kiszámítása és színezett formázása
-            val delaySpan = when {
-                // Ha az API megadja külön a késést, azt használjuk
-                delayApi != null -> styledDelay(delayApi)
-                // Egyébként menetrendi és becsült különbségéből számoljuk
-                scheduled != null && predicted != null -> styledDelay(predicted - scheduled)
-                else -> SpannableString("N/A")
-            }
-            result.append("   ⏱ Eltérés: ").append(delaySpan).append("\n")
-        }
-
-        result
+    /** @return null, ha nincs ilyen pályaszámú aktív jármű. */
+    suspend fun track(vehicleLabel: String): Tracking? {
+        val vehicle = Futar.findVehicle(vehicleLabel) ?: return null
+        if (vehicle.tripId.isBlank()) throw BkkApi.ApiException("A jármű jelenleg nem teljesít menetet.")
+        val trip = Futar.tripDetails(vehicle.tripId)
+        if (trip.stops.isEmpty()) throw BkkApi.ApiException("Ehhez a menethez nincs megállólista.")
+        val now = System.currentTimeMillis() / 1000
+        return Tracking(vehicle, trip, Futar.nextStopIndex(trip, vehicle, now), now)
     }
 }

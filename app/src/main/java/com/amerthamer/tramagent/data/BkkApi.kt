@@ -36,10 +36,10 @@ object BkkApi {
     val hasApiKey: Boolean get() = API_KEY.isNotBlank() && !API_KEY.startsWith("YOUR_")
 
     // FUTÁR (futar.bkk.hu) alap URL – pl. trip-details, vehicles-for-location
-    private const val FUTAR_BASE = "https://futar.bkk.hu/api/query/v1/ws/otp/api/where"
+    const val FUTAR_BASE = "https://futar.bkk.hu/api/query/v1/ws/otp/api/where"
 
     // GO (go.bkk.hu) alap URL – pl. vehicles-for-route, GTFS statikus/RT végpontok
-    private const val GO_BASE = "https://go.bkk.hu/api/query/v1/ws/otp/api/where"
+    const val GO_BASE = "https://go.bkk.hu/api/query/v1/ws/otp/api/where"
 
     /**
      * Közös OkHttp kliens alap logolással.
@@ -48,6 +48,26 @@ object BkkApi {
     private val client: OkHttpClient by lazy {
         val log = HttpLoggingInterceptor().apply { level = HttpLoggingInterceptor.Level.BASIC }
         OkHttpClient.Builder().addInterceptor(log).build()
+    }
+
+    /** HTTP-hiba a BKK API-tól; a [message] megjeleníthető a felhasználónak. */
+    class ApiException(message: String) : Exception(message)
+
+    /**
+     * Általános GET + JSON a FUTÁR/GO API-ra; az URL-hez hozzáfűzi a kulcsot.
+     * Hibát dob (ApiException), így a hívó meg tudja különböztetni a hibát az üres választól.
+     */
+    suspend fun getJson(url: String): JSONObject = withContext(Dispatchers.IO) {
+        if (!hasApiKey) throw ApiException("Nincs beállítva BKK API-kulcs (local.properties → bkk.apiKey).")
+        val sep = if ('?' in url) '&' else '?'
+        val req = Request.Builder().url("$url${sep}key=$API_KEY").get().build()
+        client.newCall(req).execute().use { resp ->
+            if (!resp.isSuccessful) {
+                val hint = if (resp.code == 401 || resp.code == 403) " – ellenőrizd a BKK API-kulcsot" else ""
+                throw ApiException("HTTP ${resp.code}$hint")
+            }
+            JSONObject(resp.body!!.string())
+        }
     }
 
     /**
