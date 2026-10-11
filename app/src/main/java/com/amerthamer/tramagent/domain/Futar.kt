@@ -110,7 +110,9 @@ object Futar {
         ).optJSONObject("data") ?: return null
         val list = data.optJSONArray("list") ?: return null
         val vehicles = List(list.length()) { parseVehicle(list.getJSONObject(it)) }
-        return vehicles.firstOrNull { it.licensePlate.equals(query.trim(), ignoreCase = true) } ?: vehicles.firstOrNull()
+        // A FUTÁR a villamosok pályaszámát „V” előtaggal adja (pl. V2030), ezért anélkül is egyeztetünk
+        fun plain(s: String?) = s.orEmpty().trim().uppercase().removePrefix("V")
+        return vehicles.firstOrNull { plain(it.licensePlate) == plain(query) } ?: vehicles.firstOrNull()
     }
 
     /** Egy viszonylat összes járműve + a references blokk (trips, blockId-k). */
