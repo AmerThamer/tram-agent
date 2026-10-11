@@ -18,13 +18,15 @@ A TramAgent több különálló demómodult tartalmaz:
 - Szolgáltatás-kiesés, késés, terelés, stb.
 
 ### **INDULÁSOK A KÖZELEMBEN (DK3) – Közeli megállók és indulások**
+- A GTFS letöltése után egyszeri villamos-index készül (`tram_index.bin`), így a keresés másodpercek alatt lefut
+- Csak a ma közlekedő menetek (calendar / calendar_dates), az éjfél utáni éjszakai indulásokkal együtt
 - GPS alapú helymeghatározás  
 - 300 méteren belüli megállók keresése (GTFS `stops.txt`)  
 - Soron következő indulások szűrése 60 percen belül  
 - Villamosokra szűrés (`route_type = 0 vagy 900`)
 
 ### **TÉRKÉPES KERESŐ (DK4) – Jármű pozíció térképen**
-- Google Maps integráció  
+- OpenStreetMap (osmdroid), sötét színszűrővel, API-kulcs nélkül  
 - Valós idejű jármű marker (villamos ikon)  
 - Trip headsign (irány) megjelenítése  
 - A trip összes megállójának kirajzolása GTFS adatokkal  
@@ -75,17 +77,19 @@ Az architektúra szétválasztja:
 
 ---
 
-##  API-kulcsok
+##  API-kulcs
 
-A kulcsokat a projekt gyökerében lévő (verziókezelésből kizárt) `local.properties` fájlba kell írni:
+A valós idejű funkciókhoz (DK1, DK2, DK4, DK5) saját **BKK FUTÁR API-kulcs** kell (ingyenes: https://opendata.bkk.hu/).
+Két módon adható meg:
+
+1. **Az appban:** főképernyő → fogaskerék → *BKK API-kulcs*. Mentés előtt ellenőrzi a kulcsot, és csak a készüléken tárolja.
+2. **Buildkor:** a projekt gyökerében lévő (verziókezelésből kizárt) `local.properties` fájlban:
 
 ```properties
 bkk.apiKey=SAJAT_BKK_FUTAR_KULCS
-maps.apiKey=SAJAT_GOOGLE_MAPS_KULCS
 ```
 
-A build ezekből készíti a `BuildConfig.BKK_API_KEY` mezőt és a manifest Maps-kulcsát,
-így a kulcsok sosem kerülnek a repóba. Kulcs nélkül az app elindul, és érthető hibaüzenetet mutat.
+Az appban megadott kulcs elsőbbséget élvez. A térképhez (DK4) nem kell kulcs, mert OpenStreetMap-et használ (osmdroid).
 
 ---
 
@@ -96,7 +100,7 @@ A build ezekből készíti a `BuildConfig.BKK_API_KEY` mezőt és a manifest Map
    git clone https://github.com/AmerThamer/tram-agent.git
    ```
 2. Nyisd meg Android Studio-ban  
-3. Add meg a saját BKK + Google Maps API kulcsokat a `local.properties`-ben  
+3. Add meg a saját BKK API-kulcsot (az appban vagy a `local.properties`-ben)  
 4. Futtasd a GTFS Frissítőt  
 5. Teszteld a DK1–DK5 modulokat  
 

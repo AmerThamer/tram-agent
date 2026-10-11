@@ -19,6 +19,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.amerthamer.tramagent.domain.Futar
@@ -42,6 +43,9 @@ fun TramTextField(
     placeholder: String? = null,
     leadingIcon: ImageVector? = null,
     keyboardType: KeyboardType = KeyboardType.Text,
+    capitalization: KeyboardCapitalization = KeyboardCapitalization.Characters,
+    visualTransformation: VisualTransformation = VisualTransformation.None,
+    trailing: (@Composable () -> Unit)? = null,
     onSubmit: () -> Unit = {},
 ) {
     OutlinedTextField(
@@ -52,10 +56,12 @@ fun TramTextField(
         label = { Text(label) },
         placeholder = placeholder?.let { { Text(it, color = TextSecondary.copy(alpha = 0.6f)) } },
         leadingIcon = leadingIcon?.let { { Icon(it, contentDescription = null) } },
+        trailingIcon = trailing,
+        visualTransformation = visualTransformation,
         shape = RoundedCornerShape(16.dp),
         keyboardOptions = KeyboardOptions(
             keyboardType = keyboardType,
-            capitalization = KeyboardCapitalization.Characters,
+            capitalization = capitalization,
             imeAction = ImeAction.Search,
         ),
         keyboardActions = KeyboardActions(onSearch = { onSubmit() }),

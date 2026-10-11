@@ -1,6 +1,5 @@
 package com.amerthamer.tramagent.data
 
-import com.amerthamer.tramagent.BuildConfig
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
@@ -26,14 +25,13 @@ import kotlin.math.*
 object BkkApi {
 
     /**
-     * BKK FUTÁR / GO API kulcs.
-     *
-     * A publikus repóban ez csak placeholder
+     * BKK FUTÁR / GO API kulcs: az appban megadott, vagy a local.properties-ből buildelt.
+     * A publikus repóban nincs kulcs.
      */
-    val API_KEY: String = BuildConfig.BKK_API_KEY
+    val API_KEY: String get() = ApiKeyStore.current.orEmpty()
 
-    /** Van-e valódi kulcs beállítva (nem a helykitöltő). */
-    val hasApiKey: Boolean get() = API_KEY.isNotBlank() && !API_KEY.startsWith("YOUR_")
+    /** Van-e használható kulcs. */
+    val hasApiKey: Boolean get() = ApiKeyStore.current != null
 
     // FUTÁR (futar.bkk.hu) alap URL – pl. trip-details, vehicles-for-location
     const val FUTAR_BASE = "https://futar.bkk.hu/api/query/v1/ws/otp/api/where"
@@ -50,21 +48,21 @@ object BkkApi {
         OkHttpClient.Builder().addInterceptor(log).build()
     }
 
-    /** HTTP-hiba a BKK API-tól; a [message] megjeleníthető a felhasználónak. */
-    class ApiException(message: String) : Exception(message)
+    /** HTTP-hiba a BKK API-tól; a [message] megjeleníthető a felhasználónak. [code]: HTTP státusz, ha volt. */
+    class ApiException(message: String, val code: Int? = null) : Exception(message)
 
     /**
      * Általános GET + JSON a FUTÁR/GO API-ra; az URL-hez hozzáfűzi a kulcsot.
      * Hibát dob (ApiException), így a hívó meg tudja különböztetni a hibát az üres választól.
      */
-    suspend fun getJson(url: String): JSONObject = withContext(Dispatchers.IO) {
-        if (!hasApiKey) throw ApiException("Nincs beállítva BKK API-kulcs (local.properties → bkk.apiKey).")
+    suspend fun getJson(url: String, key: String? = null): JSONObject = withContext(Dispatchers.IO) {
+        val k = key ?: ApiKeyStore.current ?: throw ApiException("Nincs megadva BKK API-kulcs – add meg a Beállításokban.")
         val sep = if ('?' in url) '&' else '?'
-        val req = Request.Builder().url("$url${sep}key=$API_KEY").get().build()
+        val req = Request.Builder().url("$url${sep}key=$k").get().build()
         client.newCall(req).execute().use { resp ->
             if (!resp.isSuccessful) {
                 val hint = if (resp.code == 401 || resp.code == 403) " – ellenőrizd a BKK API-kulcsot" else ""
-                throw ApiException("HTTP ${resp.code}$hint")
+                throw ApiException("HTTP ${resp.code}$hint", resp.code)
             }
             JSONObject(resp.body!!.string())
         }
@@ -206,7 +204,7 @@ object BkkApi {
      * Az oszlopneveket kisbetűssé és trimmelt formára normalizáljuk.
      */
     fun headerIndexMap(headerLine: String): Map<String, Int> =
-        parseCsvLine(headerLine).mapIndexed { idx, name -> name.trim().lowercase() to idx }.toMap()
+        parseCsvLine(headerLine.removePrefix("﻿")).mapIndexed { idx, name -> name.trim().lowercase() to idx }.toMap()
 
     /**
      * Segédfüggvény egy oszlop értékének kinyeréséhez több lehetséges névvel.

@@ -19,6 +19,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowForward
+import androidx.compose.material.icons.rounded.Key
 import androidx.compose.material.icons.rounded.Map
 import androidx.compose.material.icons.rounded.Route
 import androidx.compose.material.icons.rounded.Search
@@ -39,11 +40,13 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.amerthamer.tramagent.data.BkkApi
 import com.amerthamer.tramagent.domain.Dk1
 import com.amerthamer.tramagent.domain.TramLines
 import com.amerthamer.tramagent.ui.components.GlassCard
 import com.amerthamer.tramagent.ui.components.LedCell
 import com.amerthamer.tramagent.ui.components.LineBadge
+import com.amerthamer.tramagent.ui.components.StateMessage
 import com.amerthamer.tramagent.ui.components.TramButton
 import com.amerthamer.tramagent.ui.components.TramLoader
 import com.amerthamer.tramagent.ui.components.TramScreen
@@ -108,6 +111,7 @@ fun VehicleLookupScreen(
     onBack: () -> Unit,
     onTrack: (String) -> Unit,
     onShowOnMap: (String) -> Unit,
+    onOpenSettings: () -> Unit,
     vm: VehicleLookupViewModel = viewModel(),
 ) {
     val focus = LocalFocusManager.current
@@ -166,9 +170,18 @@ fun VehicleLookupScreen(
             }
 
             val results = vm.results
+            if (results != null && !BkkApi.hasApiKey) {
+                item {
+                    StateMessage(
+                        Icons.Rounded.Key, "Hiányzik a BKK API-kulcs",
+                        "A járművek lekérdezéséhez add meg a kulcsot a Beállításokban.",
+                        actionText = "Kulcs megadása", onAction = onOpenSettings,
+                    )
+                }
+            }
             when {
                 vm.loading -> item { TramLoader(Modifier.fillMaxWidth(), text = "Járművek keresése…") }
-                results != null -> results.forEach { r ->
+                results != null && BkkApi.hasApiKey -> results.forEach { r ->
                     item(key = "h_${r.routeId}") { LineHeader(r) }
                     items(r.vehicles.withIndex().toList(), key = { "${r.routeId}_${it.value.vehicle.vehicleId}_${it.index}" }) { (i, v) ->
                         VehicleCard(

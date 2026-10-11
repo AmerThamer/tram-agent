@@ -69,6 +69,8 @@ fun GtfsScreen(onBack: () -> Unit) {
     }
 
     val running = state as? GtfsRepository.State.Running
+    val indexing = state as? GtfsRepository.State.Indexing
+    val busy = running != null || indexing != null
     val files = (state as? GtfsRepository.State.Done)?.result?.files ?: existing
 
     TramScreen(kicker = "GTFS · go.bkk.hu", title = "Menetrendi adatok", onBack = onBack) {
@@ -83,6 +85,10 @@ fun GtfsScreen(onBack: () -> Unit) {
                                 fontSize = 32.sp,
                             )
                             LedText("Ne zárd be az alkalmazást", fontSize = 18.sp, color = LedAmber.copy(alpha = 0.6f))
+                        }
+                        is GtfsRepository.State.Indexing -> {
+                            LedText("Indexelés ${(s.progress * 100).toInt()}%", fontSize = 32.sp)
+                            LedText("Villamos-indulások rendezése", fontSize = 18.sp, color = LedAmber.copy(alpha = 0.6f))
                         }
                         is GtfsRepository.State.Done -> {
                             LedText("Kész ✓", fontSize = 32.sp, color = OnTimeGreen)
@@ -104,17 +110,18 @@ fun GtfsScreen(onBack: () -> Unit) {
                     }
                 }
             }
-            if (running != null) item { TramProgress(running.progress, Modifier.padding(vertical = 4.dp)) }
+            if (busy) item { TramProgress(indexing?.progress ?: running?.progress, Modifier.padding(vertical = 4.dp)) }
             item {
                 TramButton(
                     when (state) {
                         is GtfsRepository.State.Running -> "Letöltés folyamatban…"
+                        is GtfsRepository.State.Indexing -> "Indexelés folyamatban…"
                         is GtfsRepository.State.Failed -> "Újrapróbálom"
                         else -> if (updatedAt == null) "Letöltés indítása" else "Frissítés most"
                     },
                     onClick = { GtfsRepository.start(context) },
                     icon = Icons.Rounded.CloudDownload,
-                    enabled = running == null,
+                    enabled = !busy,
                 )
             }
             item {

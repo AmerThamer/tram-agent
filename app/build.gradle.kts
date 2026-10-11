@@ -7,9 +7,8 @@ plugins {
     id("com.google.protobuf")
 }
 
-// API-kulcsok a (nem verziókezelt) local.properties-ből:
-//   bkk.apiKey=...
-//   maps.apiKey=...
+// BKK API-kulcs a (nem verziókezelt) local.properties-ből:
+//   bkk.apiKey=...   (opcionális – az appban, a Beállításokban is megadható)
 val localProps = Properties().apply {
     rootProject.file("local.properties").takeIf { it.exists() }?.inputStream()?.use { load(it) }
 }
@@ -27,9 +26,6 @@ android {
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
         buildConfigField("String", "BKK_API_KEY", "\"${localProps.getProperty("bkk.apiKey", "YOUR_BKK_API_KEY_HERE")}\"")
-        val mapsKey = localProps.getProperty("maps.apiKey", "YOUR_GOOGLE_MAPS_API_KEY_HERE")
-        manifestPlaceholders["mapsApiKey"] = mapsKey
-        buildConfigField("boolean", "HAS_MAPS_KEY", (!mapsKey.startsWith("YOUR_")).toString())
     }
 
     buildTypes {
@@ -89,8 +85,7 @@ dependencies {
     implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.8.7")
     implementation("androidx.activity:activity-compose:1.9.3")
     implementation("com.google.android.gms:play-services-location:21.0.1")
-    implementation("com.google.android.gms:play-services-maps:19.0.0")
-    implementation("com.google.maps.android:maps-compose:6.4.1")
+    implementation("org.osmdroid:osmdroid-android:6.1.20")
     implementation("com.google.protobuf:protobuf-javalite:3.25.1")
     debugImplementation("androidx.compose.ui:ui-tooling")
     debugImplementation("androidx.compose.ui:ui-test-manifest")

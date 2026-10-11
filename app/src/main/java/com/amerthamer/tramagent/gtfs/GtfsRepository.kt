@@ -20,6 +20,8 @@ object GtfsRepository {
         data object Idle : State
         /** [progress]: 0..1, vagy null, ha nem ismert a teljes méret; [bytes]: eddig letöltve. */
         data class Running(val progress: Float?, val bytes: Long = 0) : State
+        /** A letöltés után a villamos-index építése (DK3 gyorsításához). */
+        data class Indexing(val progress: Float) : State
         data class Done(val result: GtfsUpdater.UpdateResult) : State
         data class Failed(val message: String) : State
     }
@@ -29,12 +31,14 @@ object GtfsRepository {
     val state: StateFlow<State> = _state.asStateFlow()
 
     fun start(context: Context) {
-        if (_state.value is State.Running) return
+        if (_state.value is State.Running || _state.value is State.Indexing) return
         val app = context.applicationContext
         _state.value = State.Running(null)
         scope.launch {
             _state.value = try {
-                State.Done(GtfsUpdater.update(app) { p, bytes -> _state.value = State.Running(p, bytes) })
+                val result = GtfsUpdater.update(app) { p, bytes -> _state.value = State.Running(p, bytes) }
+                TramIndex.rebuild(GtfsUpdater.gtfsDir(app)) { p -> _state.value = State.Indexing(p) }
+                State.Done(result)
             } catch (e: Exception) {
                 Log.e("GTFS", "Hiba a frissítés közben", e)
                 State.Failed(e.message ?: "Ismeretlen hiba")

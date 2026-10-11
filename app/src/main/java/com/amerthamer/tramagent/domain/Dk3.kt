@@ -1,6 +1,7 @@
 package com.amerthamer.tramagent.domain
 
 import com.amerthamer.tramagent.data.BkkApi
+import com.amerthamer.tramagent.gtfs.TramIndex
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.File
@@ -12,12 +13,13 @@ import java.time.format.TextStyle
 import java.util.Locale
 
 /**
- * DK3 – Közeli indulások a letöltött GTFS alapján (korábban a Dk3aActivity-ben volt).
+ * DK3 – Közeli indulások a letöltött GTFS alapján.
  *
  * - a megadott sugáron belüli megállók (stops.txt, Haversine)
  * - megállónként a legkorábbi [perStop] villamos-indulás a következő [maxMinutes] percben
- * - csak villamos (route_type 0 vagy 900), csak aznapi időpontok (24:00 utániak nélkül)
- * - csak a ma közlekedő menetek (calendar.txt / calendar_dates.txt szerint)
+ * - csak a ma közlekedő menetek (calendar.txt / calendar_dates.txt szerint), beleértve
+ *   az előző napi menetrend éjfél utáni (24:xx) indulásait is
+ * - a stop_times helyett az előre elkészített villamos-indexből dolgozik (TramIndex)
  */
 object Dk3 {
 
@@ -35,6 +37,11 @@ object Dk3 {
         data object MissingGtfs : Result
     }
 
+    private const val DAY = 86_400
+
+    /**
+     * @param onIndexing ha még nincs index (pl. régebbi GTFS-letöltés), az elkészítés haladása 0..1
+     */
     suspend fun findNearby(
         gtfsDir: File,
         lat: Double,
@@ -44,90 +51,65 @@ object Dk3 {
         radius: Double = 300.0,
         maxMinutes: Int = 60,
         perStop: Int = 3,
+        onIndexing: (Float) -> Unit = {},
     ): Result = withContext(Dispatchers.IO) {
         val stopsFile = File(gtfsDir, "stops.txt")
-        val stopTimesFile = File(gtfsDir, "stop_times.txt")
-        if (!stopsFile.exists() || !stopTimesFile.exists()) return@withContext Result.MissingGtfs
+        if (!stopsFile.exists() || !File(gtfsDir, "stop_times.txt").exists()) return@withContext Result.MissingGtfs
 
         val nearby = BkkApi.loadStops(stopsFile)
             .map { it to BkkApi.haversine(lat, lon, it.lat, it.lon) }
             .filter { it.second <= radius }
         if (nearby.isEmpty()) return@withContext Result.Success(emptyList(), anyStopInRadius = false)
 
-        val nearbyIds = nearby.map { it.first.stopId }.toSet()
-        val tramRoutes = BkkApi.loadRoutes(File(gtfsDir, "routes.txt")).filterValues { it.type == 0 || it.type == 900 }
-        val trips = loadTodaysTramTrips(gtfsDir, tramRoutes.keys, activeServices(gtfsDir, today))
+        val index = TramIndex.get(gtfsDir, onIndexing)
+        val todayActive = activeMask(index, activeServices(gtfsDir, today))
+        val yesterdayActive = activeMask(index, activeServices(gtfsDir, today.minusDays(1)))
 
-        val horizon = now.plusMinutes(maxMinutes.toLong())
-        val wrapsMidnight = horizon < now
-        val found = mutableMapOf<String, MutableList<Departure>>()
-
-        // A stop_times.txt nagy: soronként olvassuk, és csak a közeli megállók sorait bontjuk fel
-        stopTimesFile.bufferedReader().use { br ->
-            val idx = BkkApi.headerIndexMap(br.readLine() ?: return@use)
-            br.lineSequence().forEach { raw ->
-                if (raw.isBlank() || nearbyIds.none { raw.contains(it) }) return@forEach
-                val cols = BkkApi.parseCsvLine(raw)
-                val stopId = BkkApi.getCol(cols, idx, "stop_id")
-                if (stopId !in nearbyIds) return@forEach
-
-                val depStr = BkkApi.getCol(cols, idx, "departure_time")
-                val hour = depStr.substringBefore(':').toIntOrNull() ?: return@forEach
-                if (hour >= 24) return@forEach
-                val dep = runCatching { LocalTime.parse(depStr.padStart(8, '0')) }.getOrNull() ?: return@forEach
-                val inWindow = if (wrapsMidnight) dep >= now || dep <= horizon else dep >= now && dep <= horizon
-                if (!inWindow) return@forEach
-
-                val trip = trips[BkkApi.getCol(cols, idx, "trip_id")] ?: return@forEach
-                val route = tramRoutes[trip.routeId] ?: return@forEach
-
-                found.getOrPut(stopId) { mutableListOf() } += Departure(
-                    time = dep,
-                    line = route.shortName.ifBlank { TramLines.nameFor(trip.routeId) ?: trip.routeId },
-                    headsign = trip.headsign ?: "?",
-                )
-            }
-        }
-
-        // Éjfélen átnyúló ablaknál az éjfél utáni indulások a későbbiek
-        fun sortKey(d: Departure) = if (wrapsMidnight && d.time < now) d.time.toSecondOfDay() + 86_400 else d.time.toSecondOfDay()
+        val from = now.toSecondOfDay()
+        val to = from + maxMinutes * 60
 
         val stops = nearby.mapNotNull { (stop, dist) ->
-            val deps = found[stop.stopId] ?: return@mapNotNull null
-            NearbyStop(stop.stopId, stop.stopName, dist, deps.sortedBy(::sortKey).distinct().take(perStop))
+            val pairs = index.stops[stop.stopId] ?: return@mapNotNull null
+            // (tényleges idő mai 0:00-tól, menet)
+            val found = ArrayList<Pair<Int, Int>>()
+            var k = 0
+            while (k < pairs.size) {
+                val dep = pairs[k]; val trip = pairs[k + 1]; k += 2
+                val svc = index.tripService[trip]
+                if (todayActive[svc] && dep in from..to) found += dep to trip
+                // Tegnapi menetrend éjfél utáni indulása (pl. 24:35 → ma 00:35)
+                if (yesterdayActive[svc] && dep >= DAY && dep - DAY in from..to) found += (dep - DAY) to trip
+            }
+            if (found.isEmpty()) return@mapNotNull null
+            val deps = found.sortedBy { it.first }.map { (sec, trip) ->
+                Departure(
+                    time = LocalTime.ofSecondOfDay((sec % DAY).toLong()),
+                    line = index.lines[index.tripLine[trip]],
+                    headsign = index.headsigns[index.tripHeadsign[trip]],
+                )
+            }.distinct().take(perStop)
+            NearbyStop(stop.stopId, stop.stopName, dist, deps)
         }.sortedBy { it.distanceM }
 
         Result.Success(stops, anyStopInRadius = true)
     }
 
-    private data class TripInfo(val routeId: String, val headsign: String?)
+    /** Service-sorszám → aktív-e; ha nincs naptárinformáció (null), minden aktív. */
+    private fun activeMask(index: TramIndex.Index, active: Set<String>?): BooleanArray =
+        BooleanArray(index.services.size) { active == null || index.services[it] in active }
 
-    /** Csak a villamos- és a mai napon közlekedő menetek a trips.txt-ből (null [services] = nincs naptárszűrés). */
-    private fun loadTodaysTramTrips(dir: File, tramRouteIds: Set<String>, services: Set<String>?): Map<String, TripInfo> {
-        val out = HashMap<String, TripInfo>()
-        File(dir, "trips.txt").bufferedReader().use { br ->
-            val idx = BkkApi.headerIndexMap(br.readLine() ?: return out)
-            br.lineSequence().forEach { raw ->
-                if (raw.isBlank()) return@forEach
-                val cols = BkkApi.parseCsvLine(raw)
-                val routeId = BkkApi.getCol(cols, idx, "route_id")
-                if (routeId !in tramRouteIds) return@forEach
-                if (services != null && BkkApi.getCol(cols, idx, "service_id") !in services) return@forEach
-                out[BkkApi.getCol(cols, idx, "trip_id")] =
-                    TripInfo(routeId, BkkApi.getCol(cols, idx, "trip_headsign").ifBlank { null })
-            }
-        }
-        return out
-    }
+    private val serviceCache = HashMap<Pair<String, LocalDate>, Set<String>?>()
 
     /**
      * A [date] napon érvényes service_id-k a calendar.txt (heti minta + érvényesség)
      * és a calendar_dates.txt (1 = hozzáadva, 2 = törölve) alapján.
      * Ha egyik fájl sincs meg, null (nem szűrünk).
      */
-    private fun activeServices(dir: File, date: LocalDate): Set<String>? {
+    private fun activeServices(dir: File, date: LocalDate): Set<String>? = synchronized(serviceCache) {
         val calendar = File(dir, "calendar.txt")
         val dates = File(dir, "calendar_dates.txt")
+        val key = (dir.path + ":" + dates.lastModified() + ":" + calendar.lastModified()) to date
+        serviceCache[key]?.let { return it }
         if (!calendar.exists() && !dates.exists()) return null
 
         val ymd = date.format(DateTimeFormatter.BASIC_ISO_DATE)
@@ -155,6 +137,7 @@ object Dk3 {
                 }
             }
         }
-        return active
+        serviceCache[key] = active
+        active
     }
 }

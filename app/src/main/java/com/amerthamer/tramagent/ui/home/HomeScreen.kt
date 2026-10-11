@@ -17,6 +17,12 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.rounded.ArrowForward
+import androidx.compose.material.icons.rounded.Key
+import androidx.compose.material.icons.rounded.Settings
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -32,6 +38,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.amerthamer.tramagent.data.AlertsRepository
+import com.amerthamer.tramagent.data.ApiKeyStore
 import com.amerthamer.tramagent.domain.Dk2
 import com.amerthamer.tramagent.ui.components.AlertBanner
 import com.amerthamer.tramagent.ui.components.TramArriveEasing
@@ -52,7 +59,7 @@ import java.time.ZoneId
 import java.util.concurrent.TimeUnit
 
 @Composable
-fun HomeScreen(onOpen: (Feature) -> Unit) {
+fun HomeScreen(onOpen: (Feature) -> Unit, onOpenSettings: () -> Unit) {
     val context = LocalContext.current
     // A GTFS-állapotot minden visszatéréskor újraolvassuk (pl. frissítés után)
     var gtfsAge by remember { mutableStateOf<Long?>(null) }
@@ -79,10 +86,28 @@ fun HomeScreen(onOpen: (Feature) -> Unit) {
                     Text("TRAMAGENT", style = MaterialTheme.typography.labelSmall, color = TramYellow)
                     Text(greeting(), style = MaterialTheme.typography.headlineLarge)
                 }
+                IconButton(onClick = onOpenSettings) {
+                    Icon(Icons.Rounded.Settings, contentDescription = "Beállítások", tint = TextSecondary)
+                }
                 LedClock()
             }
 
             TramTrack(Modifier.padding(top = 8.dp))
+
+            // Kulcs nélkül a valós idejű funkciók nem működnek – ezt jelezzük
+            val userKey by ApiKeyStore.userKey.collectAsStateWithLifecycle()
+            if (userKey == null && ApiKeyStore.buildKey == null) {
+                GlassCard(Modifier.fillMaxWidth().padding(horizontal = 18.dp, vertical = 4.dp), onClick = onOpenSettings) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        IconChip(Icons.Rounded.Key)
+                        Column(Modifier.weight(1f).padding(start = 14.dp)) {
+                            Text("Add meg a BKK API-kulcsot", style = MaterialTheme.typography.titleMedium)
+                            Text("A valós idejű funkciókhoz szükséges", style = MaterialTheme.typography.bodySmall, color = TextSecondary)
+                        }
+                        Icon(Icons.AutoMirrored.Rounded.ArrowForward, null, tint = TramYellow)
+                    }
+                }
+            }
 
             AnimatedVisibility(
                 visible = activeAlerts.isNotEmpty(),

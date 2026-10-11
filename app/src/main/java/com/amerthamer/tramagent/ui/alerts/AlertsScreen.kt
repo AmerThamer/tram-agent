@@ -63,6 +63,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.amerthamer.tramagent.data.AlertsRepository
+import com.amerthamer.tramagent.data.BkkApi
 import com.amerthamer.tramagent.domain.Dk2
 import com.amerthamer.tramagent.ui.components.GlassCard
 import com.amerthamer.tramagent.ui.components.LedText
@@ -89,7 +90,7 @@ private val LedRed = Color(0xFFFF5A4E)
 /** DK2 – Aktív zavarok (GTFS-RT Alerts, csak villamos). */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun AlertsScreen(onBack: () -> Unit) {
+fun AlertsScreen(onBack: () -> Unit, onOpenSettings: () -> Unit) {
     val state by AlertsRepository.state.collectAsStateWithLifecycle()
     val scope = rememberCoroutineScope()
     var selectedLine by rememberSaveable { mutableStateOf<String?>(null) }
@@ -114,8 +115,10 @@ fun AlertsScreen(onBack: () -> Unit) {
                         icon = Icons.Rounded.CloudOff,
                         title = "Nem sikerült lekérni a zavarokat",
                         message = state.error.orEmpty(),
-                        actionText = "Újrapróbálom",
-                        onAction = { scope.launch { AlertsRepository.refresh(force = true) } },
+                        actionText = if (BkkApi.hasApiKey) "Újrapróbálom" else "Kulcs megadása",
+                        onAction = {
+                            if (BkkApi.hasApiKey) scope.launch { AlertsRepository.refresh(force = true) } else onOpenSettings()
+                        },
                     )
                 }
 

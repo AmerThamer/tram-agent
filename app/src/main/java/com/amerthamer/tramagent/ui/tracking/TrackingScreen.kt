@@ -57,6 +57,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.amerthamer.tramagent.data.BkkApi
 import com.amerthamer.tramagent.domain.Dk5
 import com.amerthamer.tramagent.domain.Futar
 import com.amerthamer.tramagent.ui.components.DelayChip
@@ -132,6 +133,7 @@ fun TrackingScreen(
     initialVehicle: String?,
     onBack: () -> Unit,
     onShowOnMap: (String) -> Unit,
+    onOpenSettings: () -> Unit,
     vm: TrackingViewModel = viewModel(),
 ) {
     val focus = LocalFocusManager.current
@@ -197,7 +199,8 @@ fun TrackingScreen(
                 is TrackingViewModel.State.Error -> item {
                     StateMessage(
                         Icons.Rounded.CloudOff, "Nem sikerült a lekérdezés", state.message,
-                        actionText = "Újrapróbálom", onAction = { vm.track() },
+                        actionText = if (BkkApi.hasApiKey) "Újrapróbálom" else "Kulcs megadása",
+                        onAction = { if (BkkApi.hasApiKey) vm.track() else onOpenSettings() },
                     )
                 }
                 is TrackingViewModel.State.Tracking -> {

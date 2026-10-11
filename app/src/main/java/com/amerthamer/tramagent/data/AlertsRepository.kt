@@ -29,6 +29,9 @@ object AlertsRepository {
     val state: StateFlow<State> = _state.asStateFlow()
     private val mutex = Mutex()
 
+    /** Az eltárolt állapot eldobása (pl. API-kulcs csere után). */
+    fun invalidate() { _state.value = State() }
+
     /** Frissítés; [force] nélkül a 2 percnél frissebb adatot nem kéri le újra. */
     suspend fun refresh(force: Boolean = false) = mutex.withLock {
         val current = _state.value
@@ -36,7 +39,7 @@ object AlertsRepository {
         if (!force && fresh) return@withLock
 
         if (!BkkApi.hasApiKey) {
-            _state.update { it.copy(loading = false, error = "Nincs beállítva BKK API-kulcs (local.properties → bkk.apiKey).") }
+            _state.update { it.copy(loading = false, error = "Nincs megadva BKK API-kulcs – add meg a Beállításokban.") }
             return@withLock
         }
 

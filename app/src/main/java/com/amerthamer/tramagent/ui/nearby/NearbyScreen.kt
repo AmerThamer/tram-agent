@@ -58,6 +58,7 @@ import com.amerthamer.tramagent.ui.components.LedText
 import com.amerthamer.tramagent.ui.components.LineBadge
 import com.amerthamer.tramagent.ui.components.StateMessage
 import com.amerthamer.tramagent.ui.components.TramLoader
+import com.amerthamer.tramagent.ui.components.TramProgress
 import com.amerthamer.tramagent.ui.components.TramScreen
 import com.amerthamer.tramagent.ui.components.ledPanel
 import com.amerthamer.tramagent.ui.components.tramArrival
@@ -82,6 +83,8 @@ class NearbyViewModel(app: Application) : AndroidViewModel(app) {
         data object NeedPermission : State
         data object Locating : State
         data class Searching(val source: String) : State
+        /** Egyszeri villamos-index készítés (ha a GTFS-hez még nincs). */
+        data class Indexing(val progress: Float) : State
         data object MissingGtfs : State
         data class Done(val result: Dk3.Result.Success, val source: String) : State
     }
@@ -92,14 +95,16 @@ class NearbyViewModel(app: Application) : AndroidViewModel(app) {
     /** Pozíció (utolsó ismert → friss → alapértelmezett), majd keresés a GTFS-ben. */
     @SuppressLint("MissingPermission")
     fun search() {
-        if (state is State.Locating || state is State.Searching) return
+        if (state is State.Locating || state is State.Searching || state is State.Indexing) return
         state = State.Locating
         viewModelScope.launch {
             val (loc, source) = currentLocation(getApplication())
             val lat = loc?.latitude ?: DEFAULT_LAT
             val lon = loc?.longitude ?: DEFAULT_LON
             state = State.Searching(source)
-            state = when (val r = Dk3.findNearby(GtfsUpdater.gtfsDir(getApplication()), lat, lon, LocalTime.now(Budapest))) {
+            val dir = GtfsUpdater.gtfsDir(getApplication())
+            val r = Dk3.findNearby(dir, lat, lon, LocalTime.now(Budapest)) { p -> state = State.Indexing(p) }
+            state = when (r) {
                 Dk3.Result.MissingGtfs -> State.MissingGtfs
                 is Dk3.Result.Success -> State.Done(r, source)
             }
@@ -167,7 +172,16 @@ fun NearbyScreen(onBack: () -> Unit, onOpenGtfs: () -> Unit, vm: NearbyViewModel
                 actionText = "Helymeghatározás engedélyezése", onAction = ::start,
             )
             NearbyViewModel.State.Locating -> TramLoader(Modifier.fillMaxWidth(), text = "Pozíció meghatározása…")
-            is NearbyViewModel.State.Searching -> TramLoader(Modifier.fillMaxWidth(), text = "Menetrend átfésülése…")
+            is NearbyViewModel.State.Searching -> TramLoader(Modifier.fillMaxWidth(), text = "Indulások keresése…")
+            is NearbyViewModel.State.Indexing -> Column(Modifier.fillMaxWidth()) {
+                TramProgress(s.progress, Modifier.padding(top = 24.dp))
+                Text(
+                    "Egyszeri előkészítés: villamos-index készítése… ${(s.progress * 100).toInt()}%",
+                    style = MaterialTheme.typography.bodyMedium, color = TextSecondary,
+                    modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+                    textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                )
+            }
             NearbyViewModel.State.MissingGtfs -> StateMessage(
                 Icons.Rounded.CloudDownload, "Nincsenek menetrendi adatok",
                 "A közeli indulásokhoz előbb le kell tölteni a BKK GTFS menetrendet.",

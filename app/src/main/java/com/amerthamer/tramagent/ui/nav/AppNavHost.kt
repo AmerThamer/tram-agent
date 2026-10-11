@@ -22,10 +22,12 @@ import com.amerthamer.tramagent.ui.gtfs.GtfsScreen
 import com.amerthamer.tramagent.ui.home.HomeScreen
 import com.amerthamer.tramagent.ui.map.MapScreen
 import com.amerthamer.tramagent.ui.nearby.NearbyScreen
+import com.amerthamer.tramagent.ui.settings.SettingsScreen
 import com.amerthamer.tramagent.ui.tracking.TrackingScreen
 import com.amerthamer.tramagent.ui.vehicles.VehicleLookupScreen
 
 private const val HOME = "home"
+private const val SETTINGS = "settings"
 private const val ARG_VEHICLE = "vehicle"
 
 /** Útvonal egy opcionális pályaszámmal (pl. „dk5?vehicle=1342”). */
@@ -47,6 +49,7 @@ fun AppNavHost() {
     val nav = rememberNavController()
     // dropUnlessResumed: átmenet közbeni dupla koppintás ne navigáljon kétszer / ne ürítse ki a vermet
     val back = dropUnlessResumed { nav.popBackStack() }
+    val openSettings = dropUnlessResumed { nav.navigate(SETTINGS) }
     val vehicleArg = listOf(navArgument(ARG_VEHICLE) { type = NavType.StringType; nullable = true; defaultValue = null })
 
     NavHost(
@@ -58,16 +61,20 @@ fun AppNavHost() {
         popExitTransition = { slideOutHorizontally(tween(450, easing = TramDepartEasing)) { it } + fadeOut(tween(450)) },
     ) {
         composable(HOME) {
-            HomeScreen(onOpen = dropUnlessResumedWith { feature: Feature -> nav.navigate(feature.route) })
+            HomeScreen(
+                onOpen = dropUnlessResumedWith { feature: Feature -> nav.navigate(feature.route) },
+                onOpenSettings = openSettings,
+            )
         }
         composable(Feature.VehicleLookup.route) {
             VehicleLookupScreen(
                 onBack = back,
                 onTrack = { nav.navigate(withVehicle(Feature.Tracking, it)) },
                 onShowOnMap = { nav.navigate(withVehicle(Feature.MapSearch, it)) },
+                onOpenSettings = openSettings,
             )
         }
-        composable(Feature.Alerts.route) { AlertsScreen(onBack = back) }
+        composable(Feature.Alerts.route) { AlertsScreen(onBack = back, onOpenSettings = openSettings) }
         composable(Feature.Nearby.route) {
             NearbyScreen(onBack = back, onOpenGtfs = { nav.navigate(Feature.Gtfs.route) })
         }
@@ -76,6 +83,7 @@ fun AppNavHost() {
                 initialVehicle = entry.arguments?.getString(ARG_VEHICLE),
                 onBack = back,
                 onTrack = { nav.navigate(withVehicle(Feature.Tracking, it)) },
+                onOpenSettings = openSettings,
             )
         }
         composable("${Feature.Tracking.route}?$ARG_VEHICLE={$ARG_VEHICLE}", arguments = vehicleArg) { entry ->
@@ -83,8 +91,10 @@ fun AppNavHost() {
                 initialVehicle = entry.arguments?.getString(ARG_VEHICLE),
                 onBack = back,
                 onShowOnMap = { nav.navigate(withVehicle(Feature.MapSearch, it)) },
+                onOpenSettings = openSettings,
             )
         }
         composable(Feature.Gtfs.route) { GtfsScreen(onBack = back) }
+        composable(SETTINGS) { SettingsScreen(onBack = back) }
     }
 }
