@@ -54,8 +54,6 @@ import com.amerthamer.tramagent.ui.theme.TextSecondary
 import com.amerthamer.tramagent.ui.theme.TramYellow
 import kotlinx.coroutines.launch
 import java.io.File
-import java.time.LocalTime
-import java.time.ZoneId
 import java.util.concurrent.TimeUnit
 
 @Composable
@@ -77,14 +75,13 @@ fun HomeScreen(onOpen: (Feature) -> Unit, onOpenSettings: () -> Unit) {
         Column(
             Modifier.fillMaxSize().safeDrawingPadding().verticalScroll(rememberScrollState()),
         ) {
-            // Fejléc: üdvözlés + kijelzős óra
+            // Fejléc: az app neve + kijelzős óra
             Row(
                 Modifier.fillMaxWidth().padding(start = 20.dp, end = 20.dp, top = 14.dp),
                 verticalAlignment = Alignment.Bottom,
             ) {
                 Column(Modifier.weight(1f)) {
-                    Text("TRAMAGENT", style = MaterialTheme.typography.labelSmall, color = TramYellow)
-                    Text(greeting(), style = MaterialTheme.typography.headlineLarge)
+                    Text("TramAgent", style = MaterialTheme.typography.headlineLarge, color = TramYellow)
                 }
                 IconButton(onClick = onOpenSettings) {
                     Icon(Icons.Rounded.Settings, contentDescription = "Beállítások", tint = TextSecondary)
@@ -174,13 +171,6 @@ private fun WideTile(f: Feature, subtitle: String, modifier: Modifier, onClick: 
             }
         }
     }
-}
-
-private fun greeting(): String = when (LocalTime.now(ZoneId.of("Europe/Budapest")).hour) {
-    in 5..8 -> "Jó reggelt!"
-    in 9..17 -> "Jó napot!"
-    in 18..21 -> "Jó estét!"
-    else -> "Jó éjszakát!"
 }
 
 private fun gtfsAgeDays(file: File): Long? =
