@@ -10,7 +10,6 @@ import androidx.compose.material.icons.rounded.Timeline
 import androidx.compose.material.icons.rounded.WarningAmber
 import androidx.compose.ui.graphics.vector.ImageVector
 import com.amerthamer.tramagent.ui.Dk1Activity
-import com.amerthamer.tramagent.ui.Dk2Activity
 import com.amerthamer.tramagent.ui.Dk3aActivity
 import com.amerthamer.tramagent.ui.Dk4Activity
 import com.amerthamer.tramagent.ui.Dk5Activity
@@ -30,7 +29,7 @@ enum class Feature(
     val legacyActivity: Class<out Activity>?,
 ) {
     VehicleLookup("dk1", "Pályaszám kereső", "Forgalmi szám, rendszám", Icons.Rounded.Tag, Dk1Activity::class.java),
-    Alerts("dk2", "Aktív zavarok", "GTFS-RT riasztások", Icons.Rounded.WarningAmber, Dk2Activity::class.java),
+    Alerts("dk2", "Aktív zavarok", "GTFS-RT riasztások", Icons.Rounded.WarningAmber, null),
     Nearby("dk3", "Közeli indulások", "300 m-en belül", Icons.Rounded.NearMe, Dk3aActivity::class.java),
     MapSearch("dk4", "Térképes kereső", "Jármű a térképen", Icons.Rounded.Map, Dk4Activity::class.java),
     Tracking("dk5", "Nyomkövetés", "Menetrend és késés megállónként", Icons.Rounded.Timeline, Dk5Activity::class.java),

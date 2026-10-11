@@ -8,11 +8,13 @@ import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.platform.LocalContext
+import androidx.lifecycle.compose.dropUnlessResumed
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.amerthamer.tramagent.ui.components.TramArriveEasing
 import com.amerthamer.tramagent.ui.components.TramDepartEasing
+import com.amerthamer.tramagent.ui.alerts.AlertsScreen
 import com.amerthamer.tramagent.ui.home.HomeScreen
 
 private const val HOME = "home"
@@ -41,7 +43,7 @@ fun AppNavHost() {
                 else nav.navigate(feature.route)
             })
         }
-        // Ide kerülnek az átírt képernyők, pl.:
-        // composable(Feature.Alerts.route) { AlertsScreen(onBack = nav::popBackStack) }
+        // dropUnlessResumed: átmenet közbeni dupla „vissza” ne ürítse ki a vermet
+        composable(Feature.Alerts.route) { AlertsScreen(onBack = dropUnlessResumed { nav.popBackStack() }) }
     }
 }

@@ -17,7 +17,6 @@
         <activity android:name=".ui.Dk5Activity" />
         <activity android:name=".ui.Dk4Activity" />
         <activity android:name=".ui.Dk3aActivity" />
-        <activity android:name=".ui.Dk2Activity" />
         <activity android:name=".ui.Dk1Activity" />
         <activity
             android:name=".ui.MainActivity"

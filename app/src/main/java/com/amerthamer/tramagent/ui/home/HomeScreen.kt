@@ -1,5 +1,11 @@
 package com.amerthamer.tramagent.ui.home
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -17,12 +23,18 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.LifecycleResumeEffect
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.amerthamer.tramagent.data.AlertsRepository
+import com.amerthamer.tramagent.domain.Dk2
+import com.amerthamer.tramagent.ui.components.AlertBanner
+import com.amerthamer.tramagent.ui.components.TramArriveEasing
 import com.amerthamer.tramagent.ui.components.GlassCard
 import com.amerthamer.tramagent.ui.components.IconChip
 import com.amerthamer.tramagent.ui.components.LedClock
@@ -33,6 +45,7 @@ import com.amerthamer.tramagent.ui.components.tramArrival
 import com.amerthamer.tramagent.ui.nav.Feature
 import com.amerthamer.tramagent.ui.theme.TextSecondary
 import com.amerthamer.tramagent.ui.theme.TramYellow
+import kotlinx.coroutines.launch
 import java.io.File
 import java.time.LocalTime
 import java.time.ZoneId
@@ -43,10 +56,15 @@ fun HomeScreen(onOpen: (Feature) -> Unit) {
     val context = LocalContext.current
     // A GTFS-állapotot minden visszatéréskor újraolvassuk (pl. frissítés után)
     var gtfsAge by remember { mutableStateOf<Long?>(null) }
+    val alertsState by AlertsRepository.state.collectAsStateWithLifecycle()
+    val scope = rememberCoroutineScope()
     LifecycleResumeEffect(Unit) {
         gtfsAge = gtfsAgeDays(File(context.filesDir, "gtfs/stops.txt"))
+        scope.launch { AlertsRepository.refresh() }
         onPauseOrDispose { }
     }
+    val now = System.currentTimeMillis() / 1000
+    val activeAlerts = alertsState.alerts.orEmpty().filter { it.isActive(now) }
 
     NightBox {
         Column(
@@ -66,8 +84,21 @@ fun HomeScreen(onOpen: (Feature) -> Unit) {
 
             TramTrack(Modifier.padding(top = 8.dp))
 
+            AnimatedVisibility(
+                visible = activeAlerts.isNotEmpty(),
+                enter = expandVertically(tween(500, easing = TramArriveEasing)) + fadeIn(),
+                exit = shrinkVertically() + fadeOut(),
+            ) {
+                val lines = activeAlerts.flatMap { it.lines }.distinct().sortedWith(Dk2.LineOrder)
+                AlertBanner(
+                    text = "${activeAlerts.size} aktív zavar · " + lines.joinToString(", "),
+                    modifier = Modifier.padding(horizontal = 18.dp, vertical = 4.dp),
+                    onClick = { onOpen(Feature.Alerts) },
+                )
+            }
+
             LedMarquee(
-                text = gtfsStatusText(gtfsAge),
+                text = marqueeText(activeAlerts, gtfsAge),
                 modifier = Modifier.padding(horizontal = 18.dp, vertical = 6.dp),
             )
 
@@ -135,6 +166,13 @@ private fun gtfsSubtitle(age: Long?): String = when (age) {
     0L -> "Frissítve ma"
     else -> "Frissítve $age napja"
 }
+
+/** Futószöveg: ha van aktív zavar, azokat görgeti, különben a GTFS-állapotot. */
+private fun marqueeText(alerts: List<Dk2.TramAlert>, gtfsAge: Long?): String =
+    if (alerts.isEmpty()) gtfsStatusText(gtfsAge)
+    else alerts.joinToString(" ★ ", prefix = "★ ", postfix = " ★") { a ->
+        a.lines.joinToString(", ") + ": " + a.header.ifBlank { a.effect ?: "zavar" }
+    }
 
 private fun gtfsStatusText(age: Long?): String = when (age) {
     null -> "★ Nincs letöltött GTFS – a közeli indulásokhoz és a térképhez frissítsd a menetrendi adatokat ★"

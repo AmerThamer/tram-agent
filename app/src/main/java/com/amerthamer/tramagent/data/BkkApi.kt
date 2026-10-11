@@ -32,6 +32,9 @@ object BkkApi {
      */
     val API_KEY: String = BuildConfig.BKK_API_KEY
 
+    /** Van-e valódi kulcs beállítva (nem a helykitöltő). */
+    val hasApiKey: Boolean get() = API_KEY.isNotBlank() && !API_KEY.startsWith("YOUR_")
+
     // FUTÁR (futar.bkk.hu) alap URL – pl. trip-details, vehicles-for-location
     private const val FUTAR_BASE = "https://futar.bkk.hu/api/query/v1/ws/otp/api/where"
 

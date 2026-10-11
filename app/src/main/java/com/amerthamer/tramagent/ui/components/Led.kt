@@ -125,16 +125,25 @@ fun LedCell(text: String, modifier: Modifier = Modifier, size: Dp = 46.dp) {
     }
 }
 
-/** BKK-stílusú villamos vonaljelzés: sárga lekerekített négyzet, fekete félkövér szám. */
+/**
+ * BKK-stílusú villamos vonaljelzés: sárga lekerekített négyzet, fekete félkövér szám.
+ * [dimmed]: kiválasztatlan állapot (pl. szűrőben) – csak sárga keret.
+ */
 @Composable
-fun LineBadge(line: String, modifier: Modifier = Modifier, size: Dp = 34.dp) {
+fun LineBadge(line: String, modifier: Modifier = Modifier, size: Dp = 34.dp, dimmed: Boolean = false) {
+    val shape = RoundedCornerShape(8.dp)
     Box(
         modifier
             .size(width = if (line.length > 2) size * 1.35f else size, height = size)
-            .clip(RoundedCornerShape(8.dp))
-            .background(TramYellow),
+            .clip(shape)
+            .then(if (dimmed) Modifier.border(1.5.dp, TramYellow.copy(alpha = 0.5f), shape) else Modifier.background(TramYellow)),
         contentAlignment = Alignment.Center,
     ) {
-        Text(line, color = Night, fontWeight = FontWeight.ExtraBold, fontSize = (size.value * 0.48f).sp)
+        Text(
+            line,
+            color = if (dimmed) TramYellow.copy(alpha = 0.7f) else Night,
+            fontWeight = FontWeight.ExtraBold,
+            fontSize = (size.value * 0.48f).sp,
+        )
     }
 }
