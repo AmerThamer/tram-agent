@@ -45,7 +45,9 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.ui.graphics.toArgb
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.unit.dp
@@ -55,7 +57,12 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.amerthamer.tramagent.data.BkkApi
 import com.amerthamer.tramagent.domain.Dk5
 import com.amerthamer.tramagent.ui.components.DelayChip
+import com.amerthamer.tramagent.ui.components.LedText
 import com.amerthamer.tramagent.ui.components.LineBadge
+import com.amerthamer.tramagent.ui.components.ledPanel
+import com.amerthamer.tramagent.ui.theme.LedAmber
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.ui.unit.sp
 import com.amerthamer.tramagent.ui.components.NightBox
 import com.amerthamer.tramagent.ui.components.TramButton
 import com.amerthamer.tramagent.ui.components.TramLoader
@@ -219,28 +226,61 @@ private fun createMapView(context: Context) = MapView(context).apply {
 private fun Dk5.Tracking.vehiclePoint(): GeoPoint? =
     vehicle.lat?.let { lat -> vehicle.lon?.let { lon -> GeoPoint(lat, lon) } }
 
+/**
+ * A pont vetülete a vonalra: (szakasz indexe, vetített pont). Kis területen síkbeli közelítéssel
+ * (a hosszúságot a szélesség koszinuszával skálázva) számol.
+ */
+private fun projectOnto(route: List<GeoPoint>, p: GeoPoint): Pair<Int, GeoPoint> {
+    val kx = Math.cos(Math.toRadians(p.latitude))
+    var best = Double.MAX_VALUE; var bestSeg = 0; var bestPt = route.first()
+    for (i in 0 until route.size - 1) {
+        val a = route[i]; val b = route[i + 1]
+        val ax = a.longitude * kx; val ay = a.latitude
+        val dx = b.longitude * kx - ax; val dy = b.latitude - ay
+        val px = p.longitude * kx - ax; val py = p.latitude - ay
+        val len2 = dx * dx + dy * dy
+        val f = if (len2 == 0.0) 0.0 else ((px * dx + py * dy) / len2).coerceIn(0.0, 1.0)
+        val ex = px - f * dx; val ey = py - f * dy
+        val d = ex * ex + ey * ey
+        if (d < best) {
+            best = d; bestSeg = i
+            bestPt = GeoPoint(a.latitude + f * (b.latitude - a.latitude), a.longitude + f * (b.longitude - a.longitude))
+        }
+    }
+    return bestSeg to bestPt
+}
+
 /** Útvonal (megtett szakasz halványan), megállók és a villamos kirajzolása; a régi rétegeket lecseréli. */
 private fun renderTracking(map: MapView, t: Dk5.Tracking?, icons: MapIcons) {
     map.overlays.removeAll { it is Polyline || it is Marker }
     if (t != null) {
         val stops = t.trip.stops.filter { it.lat != null && it.lon != null }
         val pts = stops.map { GeoPoint(it.lat!!, it.lon!!) }
-        val nextStopId = t.trip.stops.getOrNull(t.nextIndex)?.stopId
-        val split = stops.indexOfFirst { it.stopId == nextStopId }.let { if (it < 0) 0 else it }
         val density = map.context.resources.displayMetrics.density
 
-        if (pts.size >= 2) {
+        // A valós pálya (shape), ha ismert; különben a megállókat kötjük össze
+        val route = if (t.path.size >= 2) t.path.map { GeoPoint(it.lat, it.lon) } else pts
+        if (route.size >= 2) {
+            // Kettévágás a villamos helyénél (ha nincs pozíció, a következő megállónál)
+            val nextStop = t.trip.stops.getOrNull(t.nextIndex)
+            val anchor = t.vehiclePoint()
+                ?: nextStop?.lat?.let { lat -> nextStop.lon?.let { lon -> GeoPoint(lat, lon) } }
+                ?: route.first()
+            val (seg, at) = projectOnto(route, anchor)
             map.overlays += Polyline(map).apply {
-                setPoints(pts.take(split + 1))
-                outlinePaint.color = TramYellow.copy(alpha = 0.35f).toArgb()
+                setPoints(route.take(seg + 1) + at)
+                // átlátszó szín helyett előre kevert: az átfedő szakaszvégek így nem pöttyösek
+                outlinePaint.color = TramYellow.copy(alpha = 0.35f).compositeOver(Night).toArgb()
                 outlinePaint.strokeWidth = 5f * density
                 outlinePaint.strokeCap = Paint.Cap.ROUND
+                outlinePaint.strokeJoin = Paint.Join.ROUND
             }
             map.overlays += Polyline(map).apply {
-                setPoints(pts.drop((split - 1).coerceAtLeast(0)))
+                setPoints(listOf(at) + route.drop(seg + 1))
                 outlinePaint.color = TramYellow.toArgb()
                 outlinePaint.strokeWidth = 6f * density
                 outlinePaint.strokeCap = Paint.Cap.ROUND
+                outlinePaint.strokeJoin = Paint.Join.ROUND
             }
         }
         stops.forEachIndexed { i, s ->
@@ -261,7 +301,8 @@ private fun renderTracking(map: MapView, t: Dk5.Tracking?, icons: MapIcons) {
                 icon = icons.tram
                 setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_CENTER)
                 title = "${t.trip.line} → ${t.trip.headsign}"
-                snippet = "Pályaszám: ${t.vehicle.licensePlate ?: "?"}"
+                snippet = listOfNotNull(t.trip.blockNo?.let { "Forgalmi: $it" }, "Pályaszám: ${t.vehicle.licensePlate ?: "?"}")
+                    .joinToString(" · ")
             }
         }
     }
@@ -306,6 +347,19 @@ private class MapIcons(context: Context) {
     }
 }
 
+/** Forgalmi szám LED-cellában, a vonaljelzés mellett (a FUTÁR fedélzeti kijelzőjének mintájára). */
+@Composable
+private fun BlockNoTag(no: String, modifier: Modifier = Modifier) {
+    Column(
+        modifier.height(42.dp).ledPanel(8.dp).padding(horizontal = 8.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center,
+    ) {
+        LedText("FORG", fontSize = 11.sp, color = LedAmber.copy(alpha = 0.6f), maxLines = 1)
+        LedText(no, fontSize = 24.sp, maxLines = 1)
+    }
+}
+
 /** Átlátszatlanabb panel, hogy a térkép fölött is olvasható legyen. */
 private fun Modifier.mapPanel(): Modifier = this
     .clip(RoundedCornerShape(20.dp))
@@ -325,6 +379,7 @@ private fun VehicleInfo(t: Dk5.Tracking, onTrack: () -> Unit) {
     val next = t.trip.stops.getOrNull(t.nextIndex)
     Row(verticalAlignment = Alignment.CenterVertically) {
         LineBadge(t.trip.line, size = 42.dp)
+        t.trip.blockNo?.let { BlockNoTag(it, Modifier.padding(start = 6.dp)) }
         Column(Modifier.weight(1f).padding(horizontal = 12.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Icon(Icons.AutoMirrored.Rounded.ArrowForward, null, tint = TramYellow, modifier = Modifier.size(16.dp))
@@ -332,7 +387,8 @@ private fun VehicleInfo(t: Dk5.Tracking, onTrack: () -> Unit) {
                     modifier = Modifier.padding(start = 4.dp))
             }
             Text("Pályaszám: ${t.vehicle.licensePlate ?: "?"} · ${delayLabel(t.currentDelaySec)}",
-                style = MaterialTheme.typography.bodySmall, color = TextSecondary)
+                style = MaterialTheme.typography.bodySmall, color = TextSecondary,
+                maxLines = 1, overflow = TextOverflow.Ellipsis)
         }
         DelayChip(t.currentDelaySec, large = true)
     }

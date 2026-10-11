@@ -53,7 +53,9 @@ import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.lifecycle.ViewModel
+import android.app.Application
+import androidx.lifecycle.AndroidViewModel
+import com.amerthamer.tramagent.gtfs.GtfsUpdater
 import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -87,7 +89,8 @@ private val Hm = DateTimeFormatter.ofPattern("HH:mm")
 private val Hms = DateTimeFormatter.ofPattern("HH:mm:ss")
 private fun clock(epochSec: Long, f: DateTimeFormatter = Hm) = f.format(Instant.ofEpochSecond(epochSec).atZone(Budapest))
 
-class TrackingViewModel : ViewModel() {
+class TrackingViewModel(app: Application) : AndroidViewModel(app) {
+    private val gtfsDir = GtfsUpdater.gtfsDir(app)
     sealed interface State {
         data object Idle : State
         data object Loading : State
@@ -111,7 +114,7 @@ class TrackingViewModel : ViewModel() {
         job = viewModelScope.launch {
             while (isActive) {
                 state = try {
-                    Dk5.track(q)?.let { State.Tracking(it) } ?: State.NotFound
+                    Dk5.track(q, gtfsDir)?.let { State.Tracking(it) } ?: State.NotFound
                 } catch (e: Exception) {
                     // Frissítéskor egy átmeneti hiba ne tüntesse el a meglévő adatot
                     if (state is State.Tracking) state else State.Error(e.message ?: "Hálózati hiba")
@@ -235,7 +238,7 @@ private fun TripHeader(t: Dk5.Tracking, onMap: () -> Unit) {
                     Text(t.trip.headsign, style = MaterialTheme.typography.titleMedium, maxLines = 2,
                         modifier = Modifier.padding(start = 4.dp))
                 }
-                Text("Pályaszám: ${t.vehicle.licensePlate ?: "?"}", style = MaterialTheme.typography.bodySmall, color = TextSecondary)
+                Text(listOfNotNull(t.trip.blockNo?.let { "Forgalmi: $it" }, "Pályaszám: ${t.vehicle.licensePlate ?: "?"}").joinToString(" · "), style = MaterialTheme.typography.bodySmall, color = TextSecondary)
             }
         }
         Spacer(Modifier.height(12.dp))

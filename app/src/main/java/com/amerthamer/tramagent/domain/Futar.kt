@@ -40,13 +40,47 @@ object Futar {
         val bestTime: Long? get() = predicted ?: scheduled
     }
 
+    data class LatLon(val lat: Double, val lon: Double)
+
     data class TripDetails(
         val tripId: String,
         val routeId: String,
         val line: String,
         val headsign: String,
         val stops: List<TripStop>,
+        /** Forgalmi szám (a blockId-ból), ha a FUTÁR megadja. */
+        val blockNo: String? = null,
+        /** A menet pályája (a FUTÁR kódolt polyline-ja); üres, ha nincs megadva. */
+        val path: List<LatLon> = emptyList(),
     )
+
+    /** Forgalmi szám a blockId utolsó előtti tagjából (pl. BKK_..._12_1 → „12”). */
+    fun blockNoOf(blockId: String?): String? {
+        val parts = blockId.orEmpty().split("_")
+        return if (parts.size >= 3) parts[parts.size - 2].takeIf { it.isNotBlank() } else null
+    }
+
+    /** Google-féle kódolt polyline (1e-5 pontosság) visszafejtése. */
+    fun decodePolyline(encoded: String): List<LatLon> {
+        val out = ArrayList<LatLon>()
+        var i = 0; var lat = 0; var lon = 0
+        fun next(): Int? {
+            var result = 0; var shift = 0
+            while (i < encoded.length) {
+                val b = encoded[i++].code - 63
+                result = result or ((b and 0x1F) shl shift)
+                shift += 5
+                if (b < 0x20) return if ((result and 1) != 0) (result shr 1).inv() else result shr 1
+            }
+            return null
+        }
+        while (i < encoded.length) {
+            lat += next() ?: break
+            lon += next() ?: break
+            out += LatLon(lat / 1e5, lon / 1e5)
+        }
+        return out
+    }
 
     private fun JSONObject.optStringOrNull(key: String): String? =
         optString(key, "").takeIf { it.isNotBlank() && it != "null" }
@@ -127,6 +161,8 @@ object Futar {
             line = routeRef?.optStringOrNull("shortName") ?: TramLines.nameFor(routeId) ?: routeId.removePrefix("BKK_"),
             headsign = tripRef?.optStringOrNull("tripHeadsign") ?: stops.lastOrNull()?.name.orEmpty(),
             stops = stops,
+            blockNo = blockNoOf(tripRef?.optString("blockId")),
+            path = entry.optJSONObject("polyline")?.optStringOrNull("points")?.let(::decodePolyline).orEmpty(),
         )
     }
 

@@ -36,10 +36,9 @@ object Dk1 {
             val trips = refs.optJSONObject("trips")
             val rows = vehicles.map { v ->
                 val trip = trips?.optJSONObject(v.tripId)
-                val parts = trip?.optString("blockId").orEmpty().split("_")
                 LineVehicle(
                     vehicle = v,
-                    blockNo = if (parts.size >= 3) parts[parts.size - 2] else null,
+                    blockNo = Futar.blockNoOf(trip?.optString("blockId")),
                     headsign = trip?.optString("tripHeadsign")?.takeIf { it.isNotBlank() },
                 )
             }.sortedWith(compareBy({ it.blockNo?.toIntOrNull() ?: Int.MAX_VALUE }, { it.blockNo }))

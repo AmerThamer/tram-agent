@@ -28,8 +28,9 @@ A TramAgent több különálló demómodult tartalmaz:
 ### **TÉRKÉPES KERESŐ (DK4) – Jármű pozíció térképen**
 - OpenStreetMap (osmdroid), sötét színszűrővel, API-kulcs nélkül  
 - Valós idejű jármű marker (villamos ikon)  
-- Trip headsign (irány) megjelenítése  
-- A trip összes megállójának kirajzolása GTFS adatokkal  
+- Trip headsign (irány) és forgalmi szám (blockId / GTFS block_id) megjelenítése  
+- A menet valós pályája a FUTÁR polyline-ból vagy a GTFS `shapes.txt`-ből (a megtett szakasz halványan)  
+- A trip összes megállójának kirajzolása  
 - Predicted / Scheduled időpontok kezelése
 
 ### **NYOMKÖVETÉS (DK5)– Részletes menetrend + késés számítása**
