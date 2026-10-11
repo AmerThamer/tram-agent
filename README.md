@@ -3,6 +3,19 @@
 TramAgent egy Android-alkalmazás, amely a BKK FUTÁR / BKK GO API és a GTFS adatok felhasználásával valós idejű jármű- és menetrendi információkat jelenít meg.
 A projekt célja egy többmodulos, jól átlátható demonstráció létrehozása, amely bemutatja a tömegközlekedési adatok feldolgozását Android-on.
 
+> ## ⚠️ Revision ág – finomhangolás szükséges
+>
+> Ez az ág a felület teljes átírását tartalmazza Jetpack Compose-ra („Éjszakai BKK” dizájn, LED-kijelzős elemek,
+> villamos-animációk), valamint a DK3 indexet, az OpenStreetMap térképet és az appon belüli API-kulcs megadást.
+> Működik, de még **finomhangolásra szorul**, mielőtt a `main`-be kerülne:
+>
+> - Élő FUTÁR-adatokkal nem minden képernyő lett végigtesztelve (a DK1/DK4/DK5 részben próbaadatokkal készült).
+> - A térkép a valós pályát rajzolja (FUTÁR polyline / GTFS shapes) – hidaknál, végállomási hurkoknál még ellenőrizni kell.
+> - Az `applicationId` még `com.example.na3`; érdemes `com.amerthamer.tramagent`-re cserélni.
+> - Az OSM csempeszerver csak kis forgalomra való; szélesebb terjesztésnél saját/fizetős csempeszolgáltató kell.
+> - Release aláírás és R8/minify még nincs beállítva (a debug APK ~31 MB).
+> - Apróbb UI-igazítások (szövegtördelés, animációk időzítése) valós eszközön.
+
 ##  Fő funkciók
 
 A TramAgent több különálló demómodult tartalmaz:
